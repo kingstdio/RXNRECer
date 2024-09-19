@@ -1,0 +1,23 @@
+name: rxnrecer
+dependencies:
+  - python=3.10
+  - pip
+  - pytorch
+  - nvidia/label/cuda-12.1.1::cuda-toolkit
+  - scikit-learn
+  - pandas
+  - numpy
+  - matplotlib
+  - tqdm
+  - ipykernel
+  - transformers
+  - sentencepiece
+  - jupyterlab
+  - pip:
+    - pandarallel
+    - ipywidgets
+    - rdkit
+    - biopython
+    - fair-esm
+    - retrying
+    - boto3

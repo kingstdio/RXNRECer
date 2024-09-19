@@ -1,0 +1,12 @@
+# python cache files
+*.pyc
+__pycache__/*
+
+# huge data files
+data/datasets/*
+production/files/*
+temp/*
+*checkpoint.ipynb
+*.ipynb_checkpoints/
+.DS_Store
+._*.py
