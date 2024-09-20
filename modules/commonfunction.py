@@ -9,7 +9,6 @@ Description: common function libs
 Copyright (c) 2023 by tibd, All Rights Reserved. 
 '''
 
-import re
 import sys,os
 sys.path.insert(0, os.path.dirname(os.path.realpath('__file__')))
 sys.path.insert(1,'../')
@@ -17,7 +16,7 @@ sys.path.insert(1,'../')
 import pandas as pd
 import numpy as np
 import math
-import pjlib.evaluation as eva
+from modules import evaluation as eva
 
 from tkinter import _flatten
 from config import conf as cfg

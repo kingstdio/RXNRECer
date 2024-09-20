@@ -8,7 +8,7 @@ from Bio import SeqIO
 import torch
 import argparse
 import hashlib
-import Mactive
+from  modules.ml import Mactive
 import json
 
 #region 读取 FASTA 文件并转换为 DataFrame
@@ -47,9 +47,9 @@ def read_json_file(file_path):
 
 def get_rxn_details_from_rxn_json(rxn_ids):
     
+    rxn_ids = rxn_ids.replace("-;", "").replace(";-", "")  # 去除空格
     if rxn_ids =='-':
         return '-'
-    
     rxn_ids = rxn_ids.replace(":", "_")  # 去除空格
     rxn_id_array = rxn_ids.split(cfg.SPLITER)
     rxn_list = []  # 用于存储每个DataFrame
@@ -63,6 +63,16 @@ def get_rxn_details_from_rxn_json(rxn_ids):
     res = pd.json_normalize(rxn_list)
     
     return res
+
+def extract_equations(cellitem):
+    """Extract equations from a cell item"""
+    if str(cellitem)=='-':
+        return ['-','-']
+    
+    str_equations = cellitem.reaction_equation.to_list()
+    str_equations_chebi = cellitem.reaction_equation_ref_chebi.to_list()
+    
+    return [str_equations, str_equations_chebi]
 
 
 
@@ -134,11 +144,17 @@ def step_by_step_prediction(input_fasta, dict_rxn2id, rxn_info_base, output_file
     input_df = input_df[['uniprot_id', 'RXNRECer']].rename(columns={'uniprot_id': 'input_id'})
     
     print(f'Step 5: Saving results to {output_file}')
+    
+    # 获取反应详细信息
+    input_df['rxn_details']=input_df.RXNRECer.apply(lambda x: get_rxn_details_from_rxn_json(rxn_ids=x))
+    
     if format == 'tsv':
+        input_df[['equations', 'equations_chebi']] = input_df.apply(lambda x: extract_equations(x.rxn_details), axis=1, result_type='expand') # 提取反应方程式
+        input_df=input_df[['input_id','RXNRECer','equations','equations_chebi']]
         input_df.to_csv(output_file, index=False, sep='\t')
         
     elif format == 'json':
-        input_df['rxn_details']=input_df.RXNRECer.apply(lambda x: get_rxn_details_from_rxn_json(rxn_ids=x))
+        # input_df['rxn_details']=input_df.RXNRECer.apply(lambda x: get_rxn_details_from_rxn_json(rxn_ids=x))
         input_df.to_json(output_file,orient='records', indent=4)
     else:
         print(f'Error: Invalid output format {format}.')

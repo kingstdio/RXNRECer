@@ -25,3 +25,7 @@ conda env create -f rxnrecer.yaml
  ```
 
 
+## Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/kingstdio/RXNRECer.svg)](https://github.com/kingstdio/RXNRECer/)
+

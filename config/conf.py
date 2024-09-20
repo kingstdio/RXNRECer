@@ -89,17 +89,17 @@ FILE_DS_TEST = f'{DIR_DATASET}ds_test.feather'
 FILE_DS_TRAIN_FASTA = f'{DIR_DATASET}ds_train.fasta'
 FILE_DS_TEST_FASTA = f'{DIR_DATASET}ds_test.fasta'
 
-FILE_DS_DICT_RXN2ID = f'{DIR_DATASET}dict_rxn2id.json'
-FILE_DS_DICT_ID2RXN = f'{DIR_DATASET}dict_id2rxn.json'
+FILE_DS_DICT_RXN2ID = f'{DATA_ROOT}dict/dict_rxn2id.json'
+FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
 
-FILE_DS_CASE_ECOLI = f'{DIR_DATASET}case/ds_case_ecoli.feather'
+FILE_DS_CASE_ECOLI = f'{DATA_ROOT}datasets/case/ds_case_ecoli.feather'
 
 
 # 反应相关
 FILE_DS_RHEA_REACTIONS = f'{DIR_DATASET}ds_rhea_reactions.feather'
 FILE_DS_CHEBI_CPD = f'{DIR_DATASET}ds_chebi_cpd.feather'
-FILE_DS_RHEA = f'{DIR_DATASET}/ds_rhea.feather'
+FILE_DS_RHEA = f'{DIR_DATASET}ds_rhea.feather'
 
 
 
