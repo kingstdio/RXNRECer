@@ -82,7 +82,7 @@ class Molecule:
         return drawer
     #endregion
     
-    def add_mol_name_labele(self, mol_svg,mol_pic_width, mol_pic_height, mol_pic_size, tag_box_height):
+    def add_mol_name_labele(self, mol_svg, mol_pic_width, mol_pic_height, mol_pic_size, tag_box_height):
         """在 SVG 图片上添加化合物名称及超链接"""
         box_width = int(mol_pic_width*0.8)
         box_height = 40
@@ -155,6 +155,10 @@ class Molecule:
                                         mol_pic_height=mol_pic_height,
                                         mol_pic_size=mol_pic_size, 
                                         tag_box_height= tag_box_height)
+            
+            #TODO 将svg写入文件，返回链接    
+            
+            
 
         return svg
 
