@@ -161,6 +161,7 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
     # 获取模型预测结果
     model.eval()
     all_reactions = []
+    all_probabilities = []  # 用于存储每个样本的标签及其对应的原始概率
     
     predictions = []
     with torch.no_grad():
@@ -182,10 +183,16 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
                 ';'.join(rhea_dict[str(index)] for index, value in enumerate(pred) if value != 0)
                 for pred in y_preds
             ]
-                     
-            all_reactions.extend(reactions)
             
-        return all_reactions
+            probabilities = [
+                {rhea_dict[str(index)]: round(sigmoid_outputs[i][index].item(), 6) for index, value in enumerate(pred) if value != 0}
+                for i, pred in enumerate(y_preds)
+            ]
+                                 
+            all_reactions.extend(reactions)
+            all_probabilities.extend(probabilities)
+            
+        return all_reactions, all_probabilities
 #endregion
 
 

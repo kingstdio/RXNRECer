@@ -8,7 +8,7 @@ RDLogger.DisableLog('rdApp.*')
 
 class Molecule:
     
-    def __init__(self, cpd_smiles, cpd_name='', cpd_ref_chebi='', cpd_link='#', cpd_id=''):
+    def __init__(self, cpd_smiles, cpd_name='', cpd_ref_chebi='', cpd_link='#', cpd_id='', cpd_num=1):
         
         self.cpd_id = cpd_id
         self.cpd_smiles = cpd_smiles  # SMILES 字符串
@@ -16,7 +16,10 @@ class Molecule:
         self.cpd_link = cpd_link        # 外部链接
         self.cpd_ref_chebi = cpd_ref_chebi
         self.mol = Chem.MolFromSmiles(self.cpd_smiles)
+        self.mol_num = cpd_num
+        self.box_up_padding = 20
         self.mol_svg = self.draw_mol_simple()
+        
 
         
         
@@ -86,10 +89,10 @@ class Molecule:
         """在 SVG 图片上添加化合物名称及超链接"""
         box_width = int(mol_pic_width*0.8)
         box_height = 40
-        box_up_padding = 20
+
         
         x_box = int((mol_pic_width - box_width)/2)
-        y_box = int(mol_pic_height + tag_box_height/2 + box_up_padding)
+        y_box = int(mol_pic_height + tag_box_height/2 + self.box_up_padding)
         
         x_text = int(x_box + box_width/2)
         y_text = int(y_box  +box_height/2 + 5)
@@ -119,6 +122,11 @@ class Molecule:
         return mol_svg
     
     
+  
+
+
+    
+    
     def draw_mol_simple(self):
         mol = self.mol
 
@@ -144,10 +152,12 @@ class Molecule:
         
         # 显示化合物名称到反应结构图上
         Chem.Draw.PrepareAndDrawMolecule(drawer, mol, kekulize=False)
+        
 
         # 完成绘制并获取 SVG 文本
         drawer.FinishDrawing()
         svg = drawer.GetDrawingText()
+    
         
         if self.cpd_name != '':
             svg = self.add_mol_name_labele(mol_svg=svg,
@@ -179,7 +189,8 @@ class Molecule:
             'cpd_name': self.cpd_name,
             'cpd_ref_chebi': self.cpd_ref_chebi,
             'cpd_link':self.cpd_link,
-            'mol_svg': self.mol_svg
+            'mol_svg': self.mol_svg,
+            'cpd_num': self.mol_num
         }
     
 
