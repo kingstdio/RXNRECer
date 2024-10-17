@@ -45,7 +45,7 @@ def read_json_file(file_path):
         data = clean_data(data)  # 递归清理数据中的转义字符
     return data
 
-def get_rxn_details_from_rxn_json(rxn_ids):
+def get_rxn_details_from_rxn_json(rxn_ids, rxn_info_base):
     
     rxn_ids = rxn_ids.replace("-;", "").replace(";-", "")  # 去除空格
     if rxn_ids =='-':
@@ -55,8 +55,8 @@ def get_rxn_details_from_rxn_json(rxn_ids):
     rxn_list = []  # 用于存储每个DataFrame
     
     for rxn_id in rxn_id_array:
-        
-        item = read_json_file(f"{cfg.DIR_PROJECT_ROOT}/{cfg.RXN_JSON_DIR}{rxn_id}.json")
+        # print(f"{rxn_info_base}{rxn_id}.json")
+        item = read_json_file(f"{rxn_info_base}{rxn_id}.json")
         
         rxn_list.append(item)
         
@@ -96,7 +96,7 @@ def load_model():
     freeze_esm_layers = 32, #冻结层数,
     output_dimensions=10479,
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    model_weight_path='/hpcfs/fhome/shizhenkun/codebase/preaction/production/files/model_weight/185846best.pth',
+    model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL,
     dict_path = cfg.FILE_DS_DICT_ID2RXN
     )
 
@@ -140,7 +140,7 @@ def step_by_step_prediction(input_fasta, dict_rxn2id, rxn_info_base, output_file
                             batch_size=2,
                             device=mcfg.device)
     
-    print(res_prob)
+    # print(res_prob)
     
     input_df['RXNRECer'] = res
     input_df['RXNRECer_with_prob'] = res_prob
@@ -149,7 +149,7 @@ def step_by_step_prediction(input_fasta, dict_rxn2id, rxn_info_base, output_file
     print(f'Step 5: Saving results to {output_file}')
     
     # 获取反应详细信息
-    input_df['rxn_details']=input_df.RXNRECer.apply(lambda x: get_rxn_details_from_rxn_json(rxn_ids=x))
+    input_df['rxn_details']=input_df.RXNRECer.apply(lambda x: get_rxn_details_from_rxn_json(rxn_ids=x, rxn_info_base=rxn_info_base))
     
     if format == 'tsv':
         input_df[['equations', 'equations_chebi']] = input_df.apply(lambda x: extract_equations(x.rxn_details), axis=1, result_type='expand') # 提取反应方程式
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     format = args.format
     
     dict_rxn2id = cfg.FILE_DS_DICT_RXN2ID
-    rxn_info_base = cfg.RXN_JSON_DIR
+    rxn_info_base = cfg.DIR_RXN_JSON
 
     res = step_by_step_prediction(input_fasta=input_fasta, 
                                   dict_rxn2id = dict_rxn2id, 

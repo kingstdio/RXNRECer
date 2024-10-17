@@ -1,6 +1,12 @@
+import sys,os
+sys.path.insert(0, os.path.dirname(os.path.realpath('__file__')))
+sys.path.insert(1,'../../')
+from config import conf as cfg
+
 import base64
 from rdkit import Chem
 import json
+import hashlib
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')    
@@ -121,9 +127,6 @@ class Molecule:
         
         return mol_svg
     
-    
-  
-
 
     
     
@@ -168,16 +171,21 @@ class Molecule:
             
             #TODO 将svg写入文件，返回链接    
             
-            
-
-        return svg
+        # 将 SVG 写入到文件
+        if not os.path.exists(f'{cfg.DIR_PROJECT_ROOT}/{cfg.DIR_CPD_SVG}'):
+            os.makedirs(f'{cfg.DIR_PROJECT_ROOT}/{cfg.DIR_CPD_SVG}')
+    
+        file_name =f'{cfg.DIR_CPD_SVG}{hashlib.md5(svg.encode("utf-8")).hexdigest()}.svg'
+        with open(f'{cfg.DIR_PROJECT_ROOT}/{file_name}', "w", encoding="utf-8") as file:
+            file.write(svg)
+                
+        return file_name
 
     
     def to_html(self):
         """生成 HTML 来展示反应物和生成物的图像及其链接"""
         html_output = "<div style='display: flex; align-items: center;'>"
-        svg_data_reactant = base64.b64encode(self.mol_svg.encode('utf-8')).decode('utf-8')
-        html_output += f"<img src='data:image/svg+xml;base64,{svg_data_reactant}' style='display:inline-block'/>"
+        html_output += f"<img src='{cfg.DIR_PROJECT_ROOT}/{self.mol_svg}' style='display:inline-block'/>"
         html_output += "</div>"
 
         return html_output

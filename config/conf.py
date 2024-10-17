@@ -29,10 +29,13 @@ LOG_DIR = DATA_ROOT + 'log/'
 PIC_DIR = f'production/files/pic' 
 
 # 图片文件目录
-RXN_JSON_DIR = f'production/files/json/' 
-
+DIR_RXN_JSON = f'files/rxn_json/' 
+DIR_CPD_SVG = f'files/cpd_svg/' 
 # 生产环境结果目录
-DIR_PRODUCTION_RES = f'production/files/results/'
+DIR_PRODUCTION_RES = f'files/results/'
+
+
+FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DATA_ROOT}model/production_185846best.pth'
 
 
 # 示例文件路径
@@ -146,6 +149,9 @@ FILE_RESULTS_APLF_AP = f'{RESULTS_DIR}exp_test_aplf_ap.tsv'
 
 
 #EC-based Results
+DIR_RES_BASELINE = f'{DIR_PROJECT_ROOT}/baselines/'
+
+
 FILE_RESULTS_DEEPEC = f'{RESULTS_DIR}baselines/exp_test_deepec.tsv'
 FILE_RESULTS_CLEAN = f'{RESULTS_DIR}baselines/exp_test_clean.tsv'
 FILE_RESULTS_ECRECER = f'{RESULTS_DIR}baselines/exp_test_ecrecer.tsv'

@@ -10,3 +10,6 @@ temp/*
 *.ipynb_checkpoints/
 .DS_Store
 ._*.py
+files/*
+baselines/results/*
+data/*

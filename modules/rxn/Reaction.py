@@ -1,6 +1,7 @@
 import sys,os
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../../')
+from config import conf as cfg
 import tools.filetool as fileTool
 import base64
 import json
@@ -109,8 +110,8 @@ class Reaction:
         # 添加反应物图片
         for reactant in self.reactants:
             lb_coef = reactant.mol_num if reactant.mol_num > 1 else '' # 显示分子系数
-            svg_data_reactant = base64.b64encode(reactant.mol_svg.encode('utf-8')).decode('utf-8')
-            html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='data:image/svg+xml;base64,{svg_data_reactant}' style='display:inline-block; margin-right: 10px;'/>"
+            
+            html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='{cfg.DIR_PROJECT_ROOT}/{reactant.mol_svg}' style='display:inline-block; margin-right: 10px;'/>"
             html_output += " + "
 
         html_output = html_output[:-3]  # 移除最后的加号
@@ -120,8 +121,7 @@ class Reaction:
         for product in self.products:
             
             lb_coef = product.mol_num if product.mol_num > 1 else ''
-            svg_data_product = base64.b64encode(product.mol_svg.encode('utf-8')).decode('utf-8')
-            html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='data:image/svg+xml;base64,{svg_data_product}' style='display:inline-block; margin-right: 10px;'/>"
+            html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='{cfg.DIR_PROJECT_ROOT}/{product.mol_svg}' style='display:inline-block; margin-right: 10px;'/>"
             html_output += " + "
 
         html_output = html_output[:-3]  # 移除最后的加号
