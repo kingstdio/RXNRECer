@@ -111,7 +111,7 @@ def load_clean_resluts(res_file):
         return res
     
     with open(res_file, 'r') as f:
-        data = [line.strip().split(',') for line in f.readlines()]
+        data = [line.strip().split('\t') for line in f.readlines()]
     data = pd.DataFrame(data)
     data['ec_clean'] = data.apply(lambda x : format_ec(eclist=x[1:].to_list()), axis=1)
     data=data[[0,'ec_clean']].rename(columns={0:'Entry'})
