@@ -72,50 +72,36 @@ def make_label(reaction_id, rxn_label_dict):
     输出：
         resArray: one-hot编码标签
     """
+    # 初始化一个零数组
+    resArray = np.zeros(len(rxn_label_dict), dtype=int)
     
+    if reaction_id in {'EC-WITHOUT-REACTION', 'NO-PREDICTION'}:  # 如果没有反应或没有预测，随机返回一个标签
+        resArray[np.random.randint(len(resArray))] = 1
+        return resArray
     
-    # if reaction_id == 'EC-WITHOUT-REACTION':
-    #     print('EC-WITHOUT-REACTION')
-        
-    # if reaction_id == 'NO-PREDICTION':
-    #     print('NO-PREDICTION')
-    
-    resArray = [0]*len(rxn_label_dict)
-    
-    reactions = reaction_id.split(';')
-    for item in reactions:
-        try:
-            array_index = rxn_label_dict.get(item)
-            if array_index is not None:
-                resArray[rxn_label_dict.get(item)] =1
-            else:
-                # resArray[1704]=1 # 单元素填错
-                # print(reaction_id)
-                resArray = [0]*len(rxn_label_dict)    #如果未找到平均分布到每个类中
-        except Exception as e:
-            print(reaction_id + '\n')
-            
-            
-    
-    return resArray
-#endregion
+    # 分割反应id并迭代
+    for item in reaction_id.split(';'):
+        array_index = rxn_label_dict.get(item)
+        if array_index is not None:
+            resArray[array_index] = 1
 
+    return resArray
+
+#endregion
 
 
 
 #format EC resluts from clean
 def load_clean_resluts(res_file):
+    data = pd.read_csv(res_file, sep='\t').rename(columns={'Entry':'uniprot_id'})
     def format_ec(eclist):
-        res = [item.split('/')[0].replace('EC:','')  for item in eclist if item!=None]
-        res = ';'.join(res)
+        res = [item.split('/')[0].replace('EC:','')  for item in eclist.split(';') if item!=None]
+        res = cfg.SPLITER.join(res)
         return res
     
-    with open(res_file, 'r') as f:
-        data = [line.strip().split('\t') for line in f.readlines()]
-    data = pd.DataFrame(data)
-    data['ec_clean'] = data.apply(lambda x : format_ec(eclist=x[1:].to_list()), axis=1)
-    data=data[[0,'ec_clean']].rename(columns={0:'Entry'})
-    return data
+
+    data['ec_clean'] = data.apply(lambda x : format_ec(eclist=x.clean_pred_ec_maxsep), axis=1)
+    return data[['uniprot_id', 'ec_clean']]
 
 # region load different method results
 
