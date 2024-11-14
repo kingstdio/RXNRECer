@@ -12,11 +12,13 @@ Copyright (c) 2022 by tibd, All Rights Reserved.
 import pandas as pd
 import os,sys,re, string, random
 from datetime import datetime
+import subprocess
 from tqdm import tqdm
 from tkinter import _flatten
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../../')
 from config import conf as cfg
+import tempfile
 from Bio import SeqIO
 
 
@@ -56,18 +58,27 @@ def getblast(train, test, k=1):
     Returns:
         DataFrame: 比对结果
     """
-    table2fasta(train, '/tmp/train.fasta')
-    table2fasta(test, '/tmp/test.fasta')
+    # 使用临时文件保存 fasta 格式数据
+    with tempfile.NamedTemporaryFile(delete=True, suffix='.fasta') as fasta_train, \
+         tempfile.NamedTemporaryFile(delete=True, suffix='.fasta') as fasta_test, \
+         tempfile.NamedTemporaryFile(delete=True, suffix='.tsv') as res_blast, \
+         tempfile.NamedTemporaryFile(delete=True, suffix='.dmnd') as db_dmnd:
+        
+        # 将训练集和测试集转换为 fasta 格式
+        table2fasta(train, fasta_train.name)
+        table2fasta(test, fasta_test.name)
+
+        # 构建命令
+        cmd1 = ["diamond", "makedb", "--in", fasta_train.name, "-d", db_dmnd.name, "--quiet"]
+        cmd2 = ["diamond", "blastp", "-d", db_dmnd.name, "-q", fasta_test.name, "-o", res_blast.name, "-b5", "-c1", "-k", str(k), "--quiet"]
+        
+        # 运行命令
+        subprocess.run(cmd1, check=True)
+        subprocess.run(cmd2, check=True)
+
+        # 读取比对结果
+        res_data = pd.read_csv(res_blast.name, sep='\t', names=['id', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore'])
     
-    cmd1 = r'diamond makedb --in /tmp/train.fasta -d /tmp/train.dmnd --quiet'
-    cmd2 = f'diamond blastp -d /tmp/train.dmnd  -q  /tmp/test.fasta -o /tmp/test_fasta_results.tsv -b5 -c1 -k {k} --quiet'  
-    cmd3 = r'rm -rf /tmp/*.fasta /tmp/*.dmnd /tmp/*.tsv'
-    # print(cmd1)
-    os.system(cmd1)
-    # print(cmd2)
-    os.system(cmd2)
-    res_data = pd.read_csv('/tmp/test_fasta_results.tsv', sep='\t', names=['id', 'sseqid', 'pident', 'length','mismatch','gapopen','qstart','qend','sstart','send','evalue','bitscore'])
-    os.system(cmd3)
     return res_data
 #endregion
 

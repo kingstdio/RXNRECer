@@ -30,6 +30,28 @@ def rxn_eva_metric(eva_df, eva_name, methods, average_type='weighted'):
     resl = pd.DataFrame(resl, columns=['baselineName','mAccuracy','mPrecision','mRecall','mF1'])
     return resl
 
+def rxn_eva_metric_with_colName(eva_df, col_groundtruth, col_pred, eva_name='', average_type='weighted'):
+    # print(f'Evaluating: Reaction Predcition Results {eva_name}')
+    
+    groundtruth = np.stack(eva_df[col_groundtruth])
+    pred = np.stack(eva_df[col_pred])
+    
+
+    
+    res_item  = eva.caculateMetrix(groundtruth=groundtruth, 
+                                   predict=pred, 
+                                   baselineName=eva_name, 
+                                   type='multi', 
+                                   print_flag=False, 
+                                   averege_type=average_type
+                                   )
+    # print(res_item)
+    # resl = pd.DataFrame(res_item)
+    resl = pd.DataFrame([res_item], columns=['baselineName','mAccuracy','mPrecision','mRecall','mF1'])
+
+    return resl
+
+
 # 将EC转化为反应
 def retrival_reaction_from_ec(ec_pred, ec_reaction_map):
     reaction = '-'

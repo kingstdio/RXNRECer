@@ -13,3 +13,5 @@ temp/*
 files/*
 baselines/results/*
 data/*
+*.feather
+*.h5

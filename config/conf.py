@@ -67,7 +67,7 @@ FILE_RHEA_REACTION = UNIPROT_DATA_DIR +'rhea_reactions.feather'
 
 
 # 特征目录
-FEATURE_DIR = DATA_ROOT + 'common/featurebank/'
+FEATURE_DIR = DATA_ROOT + 'featurebank/'
 
 #ESM
 DIR_FEATURE_ESM2_L33_650M = FEATURE_DIR + 'esm2l33650m/'
@@ -120,12 +120,9 @@ FILE_SUP_SPROT = f'{UNIPROT_DATA_DIR}uniprot_sprot_info.feather' #uniprot 蛋白
 
 
 
-
-
-
 # 训练好的模型
-
-DIR_MODEL = DIR_PROJECT_ROOT + '/model/'
+DIR_MODEL = DIR_PROJECT_ROOT + '/data/model/'
+FILE_WEIGHT_PRODUCTION_BEST_MODEL = f'{DIR_MODEL}production_185846best.pth'
 
 
 # 结果目录
