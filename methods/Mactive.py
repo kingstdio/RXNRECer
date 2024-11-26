@@ -126,6 +126,7 @@ class BGRU(nn.Module):
         self.device = device
         # Create an EsmEmbedding instance
         self.embedding = EsmEmbedding(freeze_esm_layers=freeze_esm_layers, device=self.device)
+        
         # Define the GRU, attention, and output layers
         self.gru = nn.GRU(input_dimensions, gru_h_size, batch_first=True, bidirectional=True)
         self.attention = SelfAttention(attention_size, (gru_h_size * 2))

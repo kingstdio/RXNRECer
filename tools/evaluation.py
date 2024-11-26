@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath('__file__')))
 sys.path.insert(1,'../')
 
 from sklearn import metrics
+from joblib import Parallel, delayed
 import pandas as pd
 
 
@@ -78,7 +79,27 @@ def calculate_map_at_k(y_true, y_pred, k):
     map = ap / len(y_true)
     return map
 
-def caculateMetrix(groundtruth, predict, baselineName, type='binary', averege_type='macro', print_flag=True):
+
+def calculate_metrics_multi_joblib(groundtruth, predict, average_type, print_flag=False):
+    results = Parallel(n_jobs=4, timeout=6000)(
+        delayed(metric_fn)(groundtruth, predict, average_type) for metric_fn in [
+            lambda gt, pr, avg: metrics.accuracy_score(gt, pr),
+            lambda gt, pr, avg: metrics.precision_score(gt, pr, average=avg, zero_division=True),
+            lambda gt, pr, avg: metrics.recall_score(gt, pr, average=avg, zero_division=True),
+            lambda gt, pr, avg: metrics.f1_score(gt, pr, average=avg, zero_division=True)
+        ]
+    )
+
+    acc, precision, recall, f1 = results
+
+    if print_flag:
+        print('%.6f ' % acc, '\t%.6f' % precision, '\t%.6f' % recall, '\t%.6f' % f1, '\t%12s' %average_type)
+    
+    return [acc, precision, recall, f1, average_type]
+
+
+
+def caculateMetrix(groundtruth, predict, baselineName='', type='binary', averege_type='macro', print_flag=True):
     
     if type == 'binary':
         acc = metrics.accuracy_score(groundtruth, predict)
@@ -144,13 +165,18 @@ def caculateMetrix(groundtruth, predict, baselineName, type='binary', averege_ty
         return [baselineName, acc, precision, npv, recall, f1, tp, fp, fn, tn, up, un]
     
     if type == 'multi':
-        acc = metrics.accuracy_score(groundtruth, predict)
-        precision = metrics.precision_score(groundtruth, predict, average=averege_type, zero_division=True )
-        recall = metrics.recall_score(groundtruth, predict, average=averege_type, zero_division=True)
-        f1 = metrics.f1_score(groundtruth, predict, average=averege_type, zero_division=True)
-        if print_flag:
-            print('%12s'%baselineName, ' \t%.6f '%acc,'\t%.6f'% precision, '\t%.6f'% recall,'\t%.6f'% f1)
-        return [baselineName, acc, precision, recall, f1]
+        # acc = metrics.accuracy_score(groundtruth, predict)
+        # precision = metrics.precision_score(groundtruth, predict, average=averege_type, zero_division=True )
+        # recall = metrics.recall_score(groundtruth, predict, average=averege_type, zero_division=True)
+        # f1 = metrics.f1_score(groundtruth, predict, average=averege_type, zero_division=True)
+        # if print_flag:
+        #     print('%12s'%baselineName, ' \t%.6f '%acc,'\t%.6f'% precision, '\t%.6f'% recall,'\t%.6f'% f1)
+        # return [baselineName, acc, precision, recall, f1]
+        
+        res = calculate_metrics_multi_joblib(groundtruth=groundtruth, predict=predict, average_type=averege_type, print_flag=print_flag)
+        return res
+        
+        
 
 
 
