@@ -47,7 +47,7 @@ def rxn_eva_metric_with_colName(eva_df, col_groundtruth, col_pred, eva_name='', 
                                    )
     # print(res_item)
     # resl = pd.DataFrame(res_item)
-    resl = pd.DataFrame([res_item], columns=['baselineName','mAccuracy','mPrecision','mRecall','mF1'])
+    resl = pd.DataFrame([res_item], columns=['mAccuracy','mPrecision','mRecall','mF1', 'avgType'])
 
     return resl
 
@@ -194,8 +194,17 @@ def load_ecpred_res(resfile):
 
 
 
+def read_h5_file(file_path):
+    with pd.HDFStore(file_path, 'r') as h5:
+        data = h5['data']
+    return data
 
 
+def get_simi_Pred(pred_list, uniprot_rxn_dict, topk=3):
+    uniprot_id_list = [item[0] for item in pred_list][:topk]
+    rxn_ids = [uniprot_rxn_dict.get(uniprot_id) for uniprot_id in uniprot_id_list]
+    rxn_res = (cfg.SPLITER).join(set(rxn_ids))
+    return rxn_res
 
 
 if __name__ =='__main__':

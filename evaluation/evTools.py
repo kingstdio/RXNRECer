@@ -114,27 +114,112 @@ def get_fold_mean_std_metrics(input_df):
 #endregion
 
 #region 统计没有预测结果和有EC没反应的结果
-def statistic_no_res(res_df, name_col_ec, name_col_rxn):
-    grouped_counts = res_df.groupby('run_fold').agg(
-    test_size=('run_fold', 'count'),
-    no_prediction_count=(name_col_ec, lambda x: (x == 'NO-PREDICTION').sum()),
-    ec_without_reaction_count=(name_col_rxn, lambda x: (x == 'EC-WITHOUT-REACTION').sum())
-    ).reset_index()
-    
+def statistic_no_res(res_df, name_col_ec, name_col_rxn, type='ec'):
+    if type == 'ec':
+        grouped_counts = res_df.groupby('run_fold').agg(
+        test_size=('run_fold', 'count'),
+        no_prediction_count=(name_col_ec, lambda x: (x == 'NO-PREDICTION').sum()),
+        ec_without_reaction_count=(name_col_rxn, lambda x: (x == 'EC-WITHOUT-REACTION').sum())
+        ).reset_index()
+    if type == 'rxn':
+        grouped_counts = res_df.groupby('run_fold').agg(
+        test_size=('run_fold', 'count'),
+        no_prediction_count=(name_col_rxn, lambda x: (x == 'NO-PREDICTION').sum())
+        ).reset_index()
+    else:
+        grouped_counts = pd.DataFrame()
     return grouped_counts
 #endregion
 
 
 
-# region  计算10折交叉验证的结果评价指标
-def get_eval_results_ec(baselineName, dict_rxn2id):
+def get_eval_results(baselineName, dict_rxn2id, method_type):
+    # 设置不同方法的目录路径
+    if method_type == 'ec':
+        dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods'
+    elif method_type == 'direct':
+        dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct'
+    else:
+        raise ValueError("Invalid method type. Choose either 'ec' or 'direct'.")
+
+    # 处理标签数据
+    label_file = f'{dir_path}/{baselineName}_10folds_labels_res.feather'
+    if not os.path.exists(label_file):
+        if method_type == 'ec':
+            vali_res_file_path = [f'{cfg.DIR_RES_BASELINE}results/ec_methods/{baselineName}/fold{item}.tsv' for item in range(1, 11)]
+        else:
+            vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
+        
+        res = read_10fold_res_csv_files(vali_res_file_path)
+        print('Labeling ...')
+        if baselineName=='unirep':
+            columns_dict = {
+                'rxn_groundtruth': 'lb_rxn_groundtruth',
+                f'rxn_{baselineName}_euclidean': f'lb_rxn_{baselineName}_euclidean'
+            }
+        else:
+            columns_dict = {
+                'rxn_groundtruth': 'lb_rxn_groundtruth',
+                f'rxn_{baselineName}': f'lb_rxn_{baselineName}'
+            }
+        print('adalsdfj=============')
+        print(columns_dict)
+        res = make_10folds_labels(resdf=res, columns_dict=columns_dict, rxn_label_dict=dict_rxn2id, fold_num=10)
+        res.to_feather(label_file)
+        print('Labeling Done!')
+    # 计算指标
+   
+    metrics_file = f'{dir_path}/{baselineName}_10_folds_metrics_res.feather'
+    if not os.path.exists(metrics_file):
+        res = pd.read_feather(label_file)
+        print('Calculating metrics ...')
+        metrics = eva_cross_validation(res_df=res, lb_groundtruth='lb_rxn_groundtruth', lb_predict=f'lb_rxn_{baselineName}', num_folds=10)
+        metrics.insert(0, 'baselineName', f'{baselineName}')
+        metrics.to_feather(metrics_file)
+
+    # 计算均值方差
+    print('Calculating mean and std ...')
+    std_file = f'{dir_path}/{baselineName}_10_folds_std_res.feather'
+    if not os.path.exists(std_file):
+        metrics = pd.read_feather(metrics_file)
+        std = get_fold_mean_std_metrics(input_df=metrics)
+        std.to_feather(std_file)
+
+    # 统计没有预测的rxn
+    if method_type == 'ec' or (method_type == 'direct' and baselineName == 'blast'):
+        print('Statistic ec no prediction and ec with no reaction ...')
+        ec_no_rxn_file = f'{dir_path}/{baselineName}_10_folds_no_rxn_res.feather'
+        if not os.path.exists(ec_no_rxn_file):
+            res = pd.read_feather(label_file)
+            if method_type == 'ec':
+                no_rxn_10_fold = statistic_no_res(res_df=res, name_col_ec=f'ec_{baselineName}', name_col_rxn=f'rxn_{baselineName}', type='ec')
+                print(no_rxn_10_fold)
+            else:
+                no_rxn_10_fold = statistic_no_res(res_df=res, name_col_ec=None, name_col_rxn=f'rxn_{baselineName}', type='rxn')
+            no_rxn_10_fold.to_feather(ec_no_rxn_file)
+        else:
+            no_rxn_10_fold = pd.read_feather(ec_no_rxn_file)
+
+    else:
+        no_rxn_10_fold = None
+
+    # 读取并返回计算结果
+    std = pd.read_feather(std_file)
+    metrics = pd.read_feather(metrics_file)
+    return std, metrics, no_rxn_10_fold
+
+
+
+
+# region  计算10折交叉验证的结果评价指标 DIRECT 方法
+def get_eval_results_direct(baselineName, dict_rxn2id):
     
-    label_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods/{baselineName}_10folds_labels_res.feather'
+    label_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10folds_labels_res.feather'
     
     #  处理lable 数据
     if not os.path.exists(label_file):
-        vali_res_file_path = [f'{cfg.DIR_RES_BASELINE}results/ec_methods/{baselineName}/fold{item}.tsv' for item in range(1, 11)]
-        res =read_10fold_res_csv_files(vali_res_file_path)
+        vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
+        res = read_10fold_res_csv_files(vali_res_file_path)
         
         print('Labeling ...')
         columns_dict = {
@@ -147,7 +232,7 @@ def get_eval_results_ec(baselineName, dict_rxn2id):
     
     # 计算指标
     print('Calculating metrics ...')
-    metrics_flie = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods/{baselineName}_10_folds_metrics_res.feather'
+    metrics_flie = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_metrics_res.feather'
     
     if not os.path.exists(metrics_flie):
         res = pd.read_feather(label_file)
@@ -157,28 +242,34 @@ def get_eval_results_ec(baselineName, dict_rxn2id):
 
     # 计算均值方差
     print('Calculating mean and std ...')
-    std_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods/{baselineName}_10_folds_std_res.feather'
+    std_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_std_res.feather'
     if not os.path.exists(std_file):
         metrics = pd.read_feather(metrics_flie)
         std = get_fold_mean_std_metrics(input_df= metrics)
         std.to_feather(std_file)
         
     
-    # 统计没有预测的rxn
-    print('Statistic ec no prediction and ec with no reaction    ...')
-    ec_no_rxn_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods/{baselineName}_10_folds_no_rxn_res.feather'
-    if not os.path.exists(ec_no_rxn_file):
-        res = pd.read_feather(label_file)
-        no_rxn_10_fold = statistic_no_res(res_df=res, name_col_ec=f'ec_{baselineName}', name_col_rxn=f'rxn_{baselineName}')
-        no_rxn_10_fold.to_feather(ec_no_rxn_file)
-        
-      
     std = pd.read_feather(std_file)     
     metrics = pd.read_feather(metrics_flie)
-    no_rxn_10_fold = pd.read_feather(ec_no_rxn_file)
+    
+    if baselineName =='blast':
+        # 统计没有预测的rxn
+        print('Statistic ec no prediction and ec with no reaction    ...')
+        ec_no_rxn_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_no_rxn_res.feather'
+        if not os.path.exists(ec_no_rxn_file):
+            res = pd.read_feather(label_file)
+            no_rxn_10_fold = statistic_no_res(res_df=res, name_col_ec=None, name_col_rxn=f'rxn_{baselineName}', type='rxn')
+            no_rxn_10_fold.to_feather(ec_no_rxn_file)
         
-    return std, metrics, no_rxn_10_fold
+        no_rxn_10_fold = pd.read_feather(ec_no_rxn_file)
+        
+        return std, metrics, no_rxn_10_fold
+    
+    else:
+        return std, metrics, None
 #endregion
+
+
 
 
 #region Jpuyter 显示 10折交叉验证的结果HTML
@@ -325,7 +416,62 @@ def read_h5_file(file_path):
 
 
 # 计算评估指标的函数，保持并行化以提升速度
+# def calculate_metrics_multi_joblib(groundtruth, predict, average_type, print_flag=False, n_jobs=4):
+#     metric_functions = [
+#         lambda gt, pr: metrics.accuracy_score(gt, pr),
+#         lambda gt, pr: metrics.precision_score(gt, pr, average=average_type, zero_division=True),
+#         lambda gt, pr: metrics.recall_score(gt, pr, average=average_type, zero_division=True),
+#         lambda gt, pr: metrics.f1_score(gt, pr, average=average_type, zero_division=True)
+#     ]
+
+#     # 使用 joblib 并行化计算
+#     results = Parallel(n_jobs=n_jobs)(
+#         delayed(metric_fn)(groundtruth, predict) for metric_fn in metric_functions
+#     )
+
+#     if print_flag:
+#         print(f'{results[0]:.6f}\t{results[1]:.6f}\t{results[2]:.6f}\t{results[3]:.6f}\t{average_type:>12s}')
+
+#     return results + [average_type]
+
+# # 评估单个折的函数
+# def eva_one_fold(eva_df, lb_groundtruth, lb_predict, fold_num=None, n_jobs=4):
+#     # 提取 groundtruth 和 predict 数据
+#     groundtruth = np.stack(eva_df[lb_groundtruth])
+#     predict = np.stack(eva_df[lb_predict])
+    
+#     # 定义需要计算的平均类型
+#     average_types = ['weighted', 'micro', 'macro', 'samples']
+    
+   
+#     # 并行计算不同的平均类型
+#     results = Parallel(n_jobs=n_jobs)(
+#         delayed(calculate_metrics_multi_joblib)(
+#             groundtruth=groundtruth,
+#             predict=predict,
+#             average_type=avg_type,
+#             print_flag=False,
+#             n_jobs=1  # 内部不再嵌套并行，避免资源争用
+#         ) for avg_type in average_types
+#     )
+    
+#     # 处理结果并创建 DataFrame
+#     res = pd.DataFrame(results, columns=['mAccuracy', 'mPrecision', 'mRecall', 'mF1', 'avgType'])
+#     if fold_num is not None:
+#         res.insert(0, 'runFold', fold_num)
+    
+#     return res
+
+
 def calculate_metrics_multi_joblib(groundtruth, predict, average_type, print_flag=False, n_jobs=4):
+    # 检查数据是否为多标签分类
+    is_multilabel = len(groundtruth.shape) > 1 and groundtruth.shape[1] > 1
+
+    # 如果不是多标签分类，移除 'samples' 选项
+    if average_type == 'samples' and not is_multilabel:
+        raise ValueError("Samplewise metrics are not available outside of multilabel classification.")
+
+    # 定义评估指标
     metric_functions = [
         lambda gt, pr: metrics.accuracy_score(gt, pr),
         lambda gt, pr: metrics.precision_score(gt, pr, average=average_type, zero_division=True),
@@ -333,7 +479,7 @@ def calculate_metrics_multi_joblib(groundtruth, predict, average_type, print_fla
         lambda gt, pr: metrics.f1_score(gt, pr, average=average_type, zero_division=True)
     ]
 
-    # 使用 joblib 并行化计算
+    # 并行计算各指标
     results = Parallel(n_jobs=n_jobs)(
         delayed(metric_fn)(groundtruth, predict) for metric_fn in metric_functions
     )
@@ -343,15 +489,19 @@ def calculate_metrics_multi_joblib(groundtruth, predict, average_type, print_fla
 
     return results + [average_type]
 
-# 评估单个折的函数
 def eva_one_fold(eva_df, lb_groundtruth, lb_predict, fold_num=None, n_jobs=4):
     # 提取 groundtruth 和 predict 数据
     groundtruth = np.stack(eva_df[lb_groundtruth])
     predict = np.stack(eva_df[lb_predict])
-    
+
+    # 确定数据是否为多标签
+    is_multilabel = len(groundtruth.shape) > 1 and groundtruth.shape[1] > 1
+
     # 定义需要计算的平均类型
-    average_types = ['weighted', 'micro', 'macro', 'samples']
-    
+    average_types = ['weighted', 'micro', 'macro']
+    if is_multilabel:
+        average_types.append('samples')  # 仅在多标签分类中添加 'samples'
+
     # 并行计算不同的平均类型
     results = Parallel(n_jobs=n_jobs)(
         delayed(calculate_metrics_multi_joblib)(
@@ -362,20 +512,21 @@ def eva_one_fold(eva_df, lb_groundtruth, lb_predict, fold_num=None, n_jobs=4):
             n_jobs=1  # 内部不再嵌套并行，避免资源争用
         ) for avg_type in average_types
     )
-    
+
     # 处理结果并创建 DataFrame
     res = pd.DataFrame(results, columns=['mAccuracy', 'mPrecision', 'mRecall', 'mF1', 'avgType'])
     if fold_num is not None:
         res.insert(0, 'runFold', fold_num)
-    
+
     return res
+
 
 # 执行多折交叉验证
 def eva_cross_validation(res_df, lb_groundtruth, lb_predict, num_folds=10):
 
     eva_metrics = []
     for runfold in tqdm(range(1, num_folds+1)):
-        res = eva_one_fold(eva_df=res_df[res_df.run_fold==runfold].reset_index(drop=True).head(100), lb_groundtruth=lb_groundtruth, lb_predict=lb_predict,fold_num=runfold)
+        res = eva_one_fold(eva_df=res_df[res_df.run_fold==runfold].reset_index(drop=True), lb_groundtruth=lb_groundtruth, lb_predict=lb_predict,fold_num=runfold)
         eva_metrics = eva_metrics + [res]
         
     eva_metrics = pd.concat(eva_metrics, axis=0).reset_index(drop=True)

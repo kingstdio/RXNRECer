@@ -15,3 +15,6 @@ baselines/results/*
 data/*
 *.feather
 *.h5
+*.tsv
+*.xlsx
+*.json
