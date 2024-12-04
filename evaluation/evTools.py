@@ -1,9 +1,6 @@
 # Standard Library Imports
 import os
 import sys
-
-# Third-party Imports
-import json
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -134,6 +131,7 @@ def statistic_no_res(res_df, name_col_ec, name_col_rxn, type='ec'):
 
 
 def get_eval_results(baselineName, dict_rxn2id, method_type):
+    print(f'Getting evaluation results for {baselineName} ...')
     # 设置不同方法的目录路径
     if method_type == 'ec':
         dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods'
@@ -143,27 +141,27 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
         raise ValueError("Invalid method type. Choose either 'ec' or 'direct'.")
 
     # 处理标签数据
+    
+    vector_cp_methods = ['unirep_euclidean', 'unirep_cosine', 'esm_euclidean', 'esm_cosine', 't5_euclidean', 't5_cosine']
     label_file = f'{dir_path}/{baselineName}_10folds_labels_res.feather'
     if not os.path.exists(label_file):
         if method_type == 'ec':
             vali_res_file_path = [f'{cfg.DIR_RES_BASELINE}results/ec_methods/{baselineName}/fold{item}.tsv' for item in range(1, 11)]
         else:
-            vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
+            if baselineName in vector_cp_methods:
+                vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName.split("_")[0]}_fold{item}.tsv' for item in range(1, 11)]
+            else:
+                vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
         
         res = read_10fold_res_csv_files(vali_res_file_path)
         print('Labeling ...')
-        if baselineName=='unirep':
-            columns_dict = {
-                'rxn_groundtruth': 'lb_rxn_groundtruth',
-                f'rxn_{baselineName}_euclidean': f'lb_rxn_{baselineName}_euclidean'
-            }
-        else:
-            columns_dict = {
-                'rxn_groundtruth': 'lb_rxn_groundtruth',
-                f'rxn_{baselineName}': f'lb_rxn_{baselineName}'
-            }
-        print('adalsdfj=============')
-        print(columns_dict)
+
+        columns_dict = {
+            'rxn_groundtruth': 'lb_rxn_groundtruth',
+            f'rxn_{baselineName}': f'lb_rxn_{baselineName}'
+        }
+       
+        
         res = make_10folds_labels(resdf=res, columns_dict=columns_dict, rxn_label_dict=dict_rxn2id, fold_num=10)
         res.to_feather(label_file)
         print('Labeling Done!')
@@ -181,6 +179,7 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
     print('Calculating mean and std ...')
     std_file = f'{dir_path}/{baselineName}_10_folds_std_res.feather'
     if not os.path.exists(std_file):
+        print(std_file)
         metrics = pd.read_feather(metrics_file)
         std = get_fold_mean_std_metrics(input_df=metrics)
         std.to_feather(std_file)
@@ -211,67 +210,6 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
 
 
 
-# region  计算10折交叉验证的结果评价指标 DIRECT 方法
-def get_eval_results_direct(baselineName, dict_rxn2id):
-    
-    label_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10folds_labels_res.feather'
-    
-    #  处理lable 数据
-    if not os.path.exists(label_file):
-        vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
-        res = read_10fold_res_csv_files(vali_res_file_path)
-        
-        print('Labeling ...')
-        columns_dict = {
-            'rxn_groundtruth': 'lb_rxn_groundtruth',
-            f'rxn_{baselineName}': f'lb_rxn_{baselineName}'
-        }
-        
-        res = make_10folds_labels(resdf=res, columns_dict=columns_dict, rxn_label_dict=dict_rxn2id, fold_num=10)
-        res.to_feather(label_file)
-    
-    # 计算指标
-    print('Calculating metrics ...')
-    metrics_flie = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_metrics_res.feather'
-    
-    if not os.path.exists(metrics_flie):
-        res = pd.read_feather(label_file)
-        metrics = eva_cross_validation(res_df=res, lb_groundtruth='lb_rxn_groundtruth', lb_predict=f'lb_rxn_{baselineName}', num_folds=10)
-        metrics.insert(0,'baselineName', f'{baselineName}')
-        metrics.to_feather(metrics_flie)
-
-    # 计算均值方差
-    print('Calculating mean and std ...')
-    std_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_std_res.feather'
-    if not os.path.exists(std_file):
-        metrics = pd.read_feather(metrics_flie)
-        std = get_fold_mean_std_metrics(input_df= metrics)
-        std.to_feather(std_file)
-        
-    
-    std = pd.read_feather(std_file)     
-    metrics = pd.read_feather(metrics_flie)
-    
-    if baselineName =='blast':
-        # 统计没有预测的rxn
-        print('Statistic ec no prediction and ec with no reaction    ...')
-        ec_no_rxn_file = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName}_10_folds_no_rxn_res.feather'
-        if not os.path.exists(ec_no_rxn_file):
-            res = pd.read_feather(label_file)
-            no_rxn_10_fold = statistic_no_res(res_df=res, name_col_ec=None, name_col_rxn=f'rxn_{baselineName}', type='rxn')
-            no_rxn_10_fold.to_feather(ec_no_rxn_file)
-        
-        no_rxn_10_fold = pd.read_feather(ec_no_rxn_file)
-        
-        return std, metrics, no_rxn_10_fold
-    
-    else:
-        return std, metrics, None
-#endregion
-
-
-
-
 #region Jpuyter 显示 10折交叉验证的结果HTML
 # Function to display results as HTML
 def display_html_results(metrics, std_mean, no_pred, eva_name):
@@ -284,9 +222,10 @@ def display_html_results(metrics, std_mean, no_pred, eva_name):
               <h2 style='color:blue' >{eva_name} Evaluation 10 Fold std and mean Overview</h2>
                    {std_mean.to_html()}
          </div>
+         
          <div style="float:left; width:600px;">
          <h2 style='color:blue' >{eva_name} Evaluation 10 Fold No Prediction Overview</h2>
-              {no_pred.to_html()}
+              {no_pred.to_html() if no_pred is not None else ''}
          </div>
          """)
 #endregion
@@ -295,11 +234,44 @@ def display_html_results(metrics, std_mean, no_pred, eva_name):
 def show_ec_methods_10_eva_fig(res_metrics_data):
 
     # 定义颜色
-    colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999']
+    # colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999']
+    
+        # 定义颜色
+    colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999', 
+            '#A1D3B2',  # 浅绿色，协调#8ECFC9
+            '#F5C98A',  # 浅橙色，协调#FFBE7A
+            '#F9988C']  # 浅红色，协调#FA7F6F
 
     # 确保 res_fold_std 按照 F1 值排序，但保留所有度量以便绘图
     # 获取唯一的方法名称
     methods = res_metrics_data[res_metrics_data.Metric == 'mF1'].sort_values(by=['mean']).baselineName.tolist()
+    
+    if ('blast_via_ec' in methods) and ('blast_via_rxn'in methods) :
+        methods = [
+            'priam',
+            'deepec',
+            'clean',
+            'catfam',
+            'blast_via_ec',
+            'ecrecer',
+            'blast_via_rxn', 
+            'unirep_euclidean', 
+            'unirep_cosine', 
+            'esm_euclidean', 
+            'esm_cosine', 
+            't5_euclidean', 
+            't5_cosine', 
+            'RXNRECer']
+        bar_width = 0.04
+        title_text = 'Performance Comparison of All Reaction Prediction Methods'
+    elif ('RXNRECer' in methods) and ('blast_via_ec' not in methods):
+        methods = ['blast', 'unirep_euclidean', 'unirep_cosine', 'esm_euclidean', 'esm_cosine', 't5_euclidean', 't5_cosine', 'RXNRECer']
+        # methods = ['blast', 'unirep_euclidean']
+        bar_width = 0.08
+        title_text = 'Performance Comparison of Direct Reaction Prediction Methods'
+    else:
+        bar_width = 0.11
+        title_text = 'Performance Comparison of EC-based Reaction Prediction Methods'
     
     # 创建一个绘图对象
     fig = go.Figure()
@@ -308,16 +280,19 @@ def show_ec_methods_10_eva_fig(res_metrics_data):
     for idx, method in enumerate(methods):
         df_method = res_metrics_data[res_metrics_data['baselineName'] == method]
         # 只在 df_method 非空的情况下添加 trace
-        
+        # 排序并重置索引以便绘图
         showMetics = ['mAccuracy', 'mPrecision', 'mRecall', 'mF1']
-        
+        df_method = df_method.copy()
+        df_method['Metric'] = pd.Categorical(df_method['Metric'], categories=showMetics, ordered=True)
+        df_method = df_method.sort_values(by='Metric').reset_index(drop=True)
+
         if not df_method.empty:
             fig.add_trace(
                 go.Bar(
                     name=method,
                     x=showMetics,
                     y=df_method['mean'],
-                    width=0.11,  # 调整柱状图的宽度
+                    width=bar_width,  # 调整柱状图的宽度
                     error_y=dict(
                         type='data',
                         array=df_method['std'],
@@ -341,11 +316,11 @@ def show_ec_methods_10_eva_fig(res_metrics_data):
                 dtick=0.05
             ),
             dtick=0.1,  # 每隔 0.1 的主要网格线
-            range=[0, 1.1]  # y 轴的刻度最大值调整为 1.2
+            range=[0, 1.2]  # y 轴的刻度最大值调整为 1.2
         ),
         xaxis=dict(showline=True,linecolor='#000000',linewidth=1),       
         title=dict(
-        text='Performance Comparison of EC-based Reaction Prediction Methods',
+        text=title_text,
         x=0.5,
         y=0.05,
         xanchor='center',

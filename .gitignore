@@ -18,3 +18,4 @@ data/*
 *.tsv
 *.xlsx
 *.json
+*.csv

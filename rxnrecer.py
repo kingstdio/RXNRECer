@@ -144,6 +144,26 @@ def step_by_step_prediction(input_fasta, dict_rxn2id,  output_file):
     
     return input_df
 
+#region RXNRECer 预测API
+def step_by_step_prediction_with_protein_df(input_protein_df, dict_rxn2id):
+   
+    # 从 JSON 文件加载反应编码字典
+    with open(dict_rxn2id, "r") as json_file:
+        dict_rxn2id = json.load(json_file)
+        
+    model, mcfg = load_model() 
+    res = Mactive.predict_sequences(model=model, 
+                            sequences=input_protein_df.seq, 
+                            model_weight_path=mcfg.model_weight_path, 
+                            dict_path=mcfg.dict_path, 
+                            batch_size=2,
+                            device=mcfg.device)
+    
+    input_protein_df['RXNRECer'] = res
+    input_protein_df = input_protein_df[['uniprot_id', 'RXNRECer']].rename(columns={'uniprot_id': 'input_id'})
+
+    return input_protein_df
+#endregion
 
 if __name__ == '__main__':
     start_time = time.perf_counter()
