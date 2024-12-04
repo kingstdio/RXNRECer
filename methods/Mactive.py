@@ -129,7 +129,9 @@ class BGRU(nn.Module):
         
         # Define the GRU, attention, and output layers
         self.gru = nn.GRU(input_dimensions, gru_h_size, batch_first=True, bidirectional=True)
+        
         self.attention = SelfAttention(attention_size, (gru_h_size * 2))
+        
         self.output_layer = nn.Linear((gru_h_size * 2), output_dimensions)
         self.dropout = nn.Dropout(dropout)
 
