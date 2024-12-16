@@ -19,3 +19,7 @@ data/*
 *.xlsx
 *.json
 *.csv
+*.pdb
+*.out
+*.err
+*.fasta

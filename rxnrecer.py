@@ -91,7 +91,7 @@ def load_model():
     dict_path = cfg.FILE_DS_DICT_ID2RXN
     )
 
-
+    print(f'Use device: {mcfg.device}')
     model = Mactive.BGRU(
         input_dimensions=mcfg.esm_out_dim,
         device = mcfg.device,

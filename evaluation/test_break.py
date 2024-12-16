@@ -33,5 +33,5 @@ with open(cfg.FILE_DS_DICT_RXN2ID, "r") as json_file:
 print('Loading validation datasets feather path ...')
 
 
-std_blast, metrics_blast, ec_no_rxn_blast  = evTools.get_eval_results(baselineName='blast', dict_rxn2id=dict_rxn2id, method_type='direct')
-evTools.display_html_results(metrics = metrics_blast, std_mean = std_blast, no_pred=ec_no_rxn_blast, eva_name ='Blast-direct')
+std_blast, metrics_blast, ec_no_rxn_blat =evTools.get_eval_results(baselineName= 'blast', dict_rxn2id=dict_rxn2id, method_type='ec')
+evTools.display_html_results(metrics = metrics_blast, std_mean = std_blast, no_pred=ec_no_rxn_blat, eva_name ='Blast')

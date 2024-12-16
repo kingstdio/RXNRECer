@@ -153,7 +153,7 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
     data_loader = DataLoader(sequences, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
            
     # 加载已保存模型
-    state_dict = torch.load(model_weight_path, map_location=device)
+    state_dict = torch.load(model_weight_path, map_location=device, weights_only=True)
     model.load_state_dict({k.replace("module.", ""): v for k, v in state_dict.items()})
     model.to(device)
 

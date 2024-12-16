@@ -118,13 +118,13 @@ def statistic_no_res(res_df, name_col_ec, name_col_rxn, type='ec'):
         no_prediction_count=(name_col_ec, lambda x: (x == 'NO-PREDICTION').sum()),
         ec_without_reaction_count=(name_col_rxn, lambda x: (x == 'EC-WITHOUT-REACTION').sum())
         ).reset_index()
+        
     if type == 'rxn':
         grouped_counts = res_df.groupby('run_fold').agg(
         test_size=('run_fold', 'count'),
         no_prediction_count=(name_col_rxn, lambda x: (x == 'NO-PREDICTION').sum())
         ).reset_index()
-    else:
-        grouped_counts = pd.DataFrame()
+    
     return grouped_counts
 #endregion
 
