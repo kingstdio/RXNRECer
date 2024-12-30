@@ -122,18 +122,27 @@ def step_by_step_prediction(input_fasta, dict_rxn2id,  output_file):
     model, mcfg = load_model() 
 
     print('Step 4: Predicting ...')
-    res = Mactive.predict_sequences(model=model, 
-                            sequences=input_df.seq, 
-                            model_weight_path=mcfg.model_weight_path, 
-                            dict_path=mcfg.dict_path, 
-                            batch_size=2,
-                            device=mcfg.device)
+    # res = Mactive.predict_sequences(model=model, 
+    #                         sequences=input_df.seq, 
+    #                         model_weight_path=mcfg.model_weight_path, 
+    #                         dict_path=mcfg.dict_path, 
+    #                         batch_size=2,
+    #                         device=mcfg.device)
+    
+    res, res_prob = Mactive.predict_sequences(model=model,
+                        sequences=input_df.seq,
+                        model_weight_path=mcfg.model_weight_path,
+                        dict_path=mcfg.dict_path,
+                        batch_size=2,
+                        device=mcfg.device)
     
     input_df['RXNRECer'] = res
-    input_df = input_df[['uniprot_id', 'RXNRECer']].rename(columns={'uniprot_id': 'input_id'})
+    input_df['RXNRECer_with_prob'] = res_prob
+    input_df = input_df[['uniprot_id', 'RXNRECer', 'RXNRECer_with_prob']].rename(columns={'uniprot_id': 'input_id'})
     
     print(f'Step 5: Saving results to {output_file}')
     if format == 'tsv':
+        print(input_df)
         input_df.to_csv(output_file, index=False, sep='\t')
         
     elif format == 'json':
@@ -160,6 +169,7 @@ def step_by_step_prediction_with_protein_df(input_protein_df, dict_rxn2id):
                             device=mcfg.device)
     
     input_protein_df['RXNRECer'] = res
+    
     input_protein_df = input_protein_df[['uniprot_id', 'RXNRECer']].rename(columns={'uniprot_id': 'input_id'})
 
     return input_protein_df

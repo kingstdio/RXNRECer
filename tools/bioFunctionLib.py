@@ -18,8 +18,10 @@ from tkinter import _flatten
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../../')
 from config import conf as cfg
+from modules.structure.Tdi import Tdi
 import tempfile
 from Bio import SeqIO
+from tools import filetool 
 
 
 #region DataFrame表格转fasta文件
@@ -205,3 +207,127 @@ def stiatistic_ec_num(eclist):
     return num_ecs
 #endregion
 
+
+#region 创建foldseek数据库
+
+def make_foldseek_db(prp_df, db_name):
+    # Step 1: 定义目标目录
+    dir_pdb = f'{cfg.DIR_FOLDSEEK_PDB}{db_name}/pdb/'
+    dir_db = f'{cfg.DIR_FOLDSEEK_PDB}{db_name}/DB/{db_name}'
+
+    # Step 2: 创建目录（如果不存在）
+    if not os.path.exists(dir_pdb):
+        os.makedirs(dir_pdb)
+        
+    if not os.path.exists(f'{cfg.DIR_FOLDSEEK_PDB}{db_name}/DB'):
+        os.makedirs(f'{cfg.DIR_FOLDSEEK_PDB}{db_name}/DB')
+
+    # Step 3: 复制 PDB 文件到目标目录
+    print(f'Copying PDBs total:{len(prp_df)} files')
+    prp_df.path_pdb.parallel_apply(lambda x: filetool.cp_pdb(src=x, dst=f'{dir_pdb}{os.path.basename(x)}'))
+
+    # Step 4: 构建 FoldSeek 数据库创建命令
+    foldseek_cmd = f'foldseek createdb {dir_pdb} {dir_db}'
+
+    print(f"Executing command: {foldseek_cmd}")
+    
+    # Step 5: 执行命令并捕获输出
+    result = subprocess.run(
+        foldseek_cmd,
+        shell=True,  # 必须启用 Shell 模式以解析字符串命令
+        stdout=subprocess.PIPE,  # 捕获标准输出
+        stderr=subprocess.PIPE,  # 捕获错误输出
+        text=True  # 输出为文本
+    )
+    
+    # # 打印输出以供调试
+    # print("STDOUT:", result.stdout)
+    # print("STDERR:", result.stderr)
+    
+    # 检查返回码
+    if result.returncode != 0:
+        raise RuntimeError(f"FoldSeek command failed with error: {result.stderr}")
+
+    # 返回成功状态
+    return 'success'
+#endregion
+
+#region 准备测试集PDB文件
+def gather_test_pdb_db(prp_df, db_name):
+    # Step 1: 定义目标目录
+    
+    dir_pdb_test = f'{cfg.DIR_FOLDSEEK_PDB}{db_name}/pdb_test/'
+        
+    if not os.path.exists(dir_pdb_test):
+        os.makedirs(dir_pdb_test)
+
+    # Step 3: 复制 PDB 文件到目标目录
+    print(f'Copying PDBs total: {len(prp_df)} files, target directory: {dir_pdb_test}')
+    prp_df.path_pdb.parallel_apply(lambda x: filetool.cp_pdb(src=x, dst=f'{dir_pdb_test}{os.path.basename(x)}'))
+
+    print(f'Copying PDBs finished total:{len(prp_df)}')
+
+    # 返回成功状态
+    return 'success'
+#endregion
+
+
+#region 计算FoldSeek 3DI描述子
+def get_fold_seek_3di(pdb_path, output_path=None, threads=40, verbosity=0):
+    """
+    Converts a PDB file to a 3DI descriptor using FoldSeek, removes the .dbtype file,
+    and reads the resulting 3DI file into a Tdi object. Skips FoldSeek calculation if
+    the 3DI file already exists.
+    
+    Parameters:
+    - pdb_path (str): Path to the input PDB file.
+    - output_path (str): Path to save the output 3DI file. If None, derives path based on cfg.DIR_DATASET_3DI and pdb_path.
+    - threads (int): Number of threads to use for FoldSeek. Default is 10.
+    - verbosity (int): Verbosity level for FoldSeek. Default is 0.
+    
+    Returns:
+    - Tdi: Parsed 3DI descriptor as a Tdi object.
+    """
+    if not os.path.isfile(pdb_path):
+        raise FileNotFoundError(f"The PDB file does not exist: {pdb_path}")
+
+    # Default output path if not provided
+    if output_path is None:
+        output_path = os.path.join(
+            cfg.DIR_DATASET_3DI,
+            '/'.join(os.path.splitext(pdb_path)[0].split('/')[-2:]) + '.3di'
+        )
+    # print(f'{output_path}')
+    # Ensure the output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Check if the 3DI file already exists
+    if os.path.exists(output_path):
+        if verbosity > 0:
+            print(f"3DI file already exists. Skipping FoldSeek: {output_path}")
+    else:
+        # Construct the FoldSeek command
+        command = [
+            "foldseek", "structureto3didescriptor", 
+            pdb_path, output_path, 
+            "--threads", str(threads), 
+            "-v", str(verbosity)
+        ]
+        # print(command)
+        try:
+            # Execute the command
+            subprocess.run(command, capture_output=True, text=True, check=True)
+
+            # Remove the .dbtype file if it exists
+            dbtype_file = output_path + ".dbtype"
+            if os.path.exists(dbtype_file):
+                os.remove(dbtype_file)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"FoldSeek failed with error: {e.stderr.strip()}")
+
+    # Read and return the 3DI file
+    res_3di = Tdi()
+    res_3di.read_3di_file(output_path)
+
+    return res_3di
+#endregion

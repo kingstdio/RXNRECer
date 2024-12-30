@@ -181,7 +181,39 @@ def get_batch_data_from_uniprot_rest_api(url):
 
 def get_one_record_from_uniprot_rest_api(url):
     all_fastas = requests.get(url).text
-    print(all_fastas)
+    return all_fastas
+
+
+
+
+# Function to fetch UniProt data for multiple IDs at once with batch processing
+def get_uniprot_records_by_ids(ids, batch_size=40):
+  # Define UniProt API endpoint
+    base_url = "https://rest.uniprot.org/uniprotkb/search"
+    all_results = []
+    for i in range(0, len(ids), batch_size):
+        batch_ids = ids[i:i+batch_size]
+        ids_query = " OR accession:".join(batch_ids)
+        query = f"accession:{ids_query}"
+        api_url = f"{base_url}?query={query}&format=tsv&fields=accession,reviewed,protein_name,gene_names,gene_oln,organism_name,length,ec,rhea,sequence&compressed=false"
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            batch_result = response.text.strip().split('\n')[1:]
+            all_results.extend(batch_result)
+        else:
+            print(f"Error fetching batch {i//batch_size + 1}: {response.status_code}")
+    
+    # Split and filter empty rows
+    all_results = [item.split('\t') for item in all_results if item.strip()]
+    
+    # Create DataFrame
+    columns = ['uniprot_id', 'reviewed', 'protein_name', 'gene_names', 'gene_oln', 'organism_name', 'length', 'ec', 'reaction_id', 'seq']
+    all_results_df = pd.DataFrame(all_results, columns=columns)
+    
+    # Drop rows with all None values
+    all_results_df = all_results_df.dropna(how='all')
+    
+    return all_results_df
 
 
 if __name__ =="__main__":

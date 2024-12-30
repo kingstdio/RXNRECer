@@ -23,3 +23,14 @@ data/*
 *.out
 *.err
 *.fasta
+*.pdb.gz
+*.pdb
+*.pkl
+*.pkl.gz
+*.pt
+*.dbtype
+*.index
+*.lookup
+*.source
+results/intermediate/*
+results/structural/*

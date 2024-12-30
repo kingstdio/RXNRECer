@@ -8,18 +8,20 @@ Description:
 
 Copyright (c) 2023 by tibd, All Rights Reserved. 
 '''
-
-
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.realpath('__file__')))
 from retrying import retry
 from matplotlib.pyplot import axis
 import urllib3
 import pandas as pd
-import os
-import sys
+
 from shutil import copyfile
 from sys import exit
 import zipfile
 import tarfile
+import shutil
+import subprocess
 
 
 #region 下载文件
@@ -52,6 +54,36 @@ def wget(download_url, save_file, verbos=False):
         process = os.popen(cmd)
         output = process.read()
     process.close()
+    
+def download_with_wget(url, dst):
+    """
+    Download a file using wget and handle errors.
+
+    Parameters:
+    url (str): The URL of the file to download.
+    dst (str): The destination path to save the file.
+
+    Returns:
+    bool: True if download is successful, False if not.
+    """
+    try:
+        # 调用 wget 命令并捕获输出
+        result = subprocess.run(
+            ["wget", "-O", dst, url],
+            stdout=subprocess.PIPE,  # 捕获标准输出
+            stderr=subprocess.PIPE,  # 捕获错误输出
+            text=True  # 输出为文本而非字节
+        )
+        
+        # 检查返回码和输出内容
+        if result.returncode == 0:
+            print(f"File downloaded successfully to {dst}")
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return False
 
 def convert_DF_dateTime(inputdf):
     """[Covert unisprot csv records datatime]
@@ -134,7 +166,6 @@ def unzipfile(filename, target_dir):
 #endregion
 
 
-import tarfile
 
 
 #region 解压 tar 文件到指定目录
@@ -172,3 +203,57 @@ def checkFileExists_with_dir_make(filepath):
 
     return res
 
+
+def cp_pdb(src, dst):
+    """
+    Copy a PDB file from source to destination, ensuring the destination directory exists.
+    Returns:
+        1: if the copy is successful.
+        0: if the copy fails or the source file does not exist.
+    """
+
+    # if not os.path.exists(os.path.dirname(dst)):
+    #     print(os.path.dirname(dst))
+    #     os.makedirs(os.path.dirname(dst), exist_ok=True)
+    
+    # 复制文件
+    if os.path.exists(src):
+        
+        if not os.path.exists(os.path.dirname(dst)):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+        
+        shutil.copy(src, dst)
+        return True
+    else:
+        return False
+    
+    
+def get_pdb_files(directory):
+    """
+    Get a list of all .pdb files in the specified directory and its subdirectories.
+
+    Parameters:
+    directory (str): The root directory to search for .pdb files.
+
+    Returns:
+    list: A list of paths to .pdb files.
+    """
+    pdb_files = []
+    for root, dirs, files in os.walk(directory):  # 遍历目录及子目录
+        for file in files:
+            if file.endswith(".pdb"):  # 筛选 .pdb 文件
+                pdb_files.append(os.path.join(root, file))
+    return pdb_files
+
+
+
+def is_file_empty(file_path):
+    """检查文件是否为空"""
+    if os.path.isfile(file_path):
+        size = os.path.getsize(file_path)
+        if size == 0:
+            return True
+        else:
+            return False
+    else:
+        raise FileNotFoundError(f"文件不存在: {file_path}")

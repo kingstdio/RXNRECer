@@ -86,6 +86,7 @@ FILE_EMBD_PROTEIN_UNIREP = FEATURE_DIR + 'unirep.feather'
 
 # 数据集
 DIR_DATASET = f'{DATA_ROOT}datasets/task240524/'
+DIR_DATASET_3DI = f'{DATA_ROOT}3di/'
 
 FILE_DS_TRAIN = f'{DIR_DATASET}ds_train.feather'
 FILE_DS_TEST = f'{DIR_DATASET}ds_test.feather'
@@ -96,6 +97,7 @@ FILE_DS_DICT_RXN2ID = f'{DATA_ROOT}dict/dict_rxn2id.json'
 FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
 FILE_DS_PDB_LIST = f'{DIR_DATASET}/ds_all_pdb_map.feather' # 所有pdb 结构列表
+FILE_DS_3DI_LIST = f'{DIR_DATASET}/ds_all_3di.feather' # 所有pdb 结构列表
 
 
 FILE_DS_CASE_ECOLI = f'{DATA_ROOT}datasets/case/ds_case_ecoli.feather'
@@ -119,6 +121,11 @@ FILE_WEB_REACTION_ENZYME_RELATION = f'{WEB_DATA_DIR}web_reaction_enzyme_relation
 FILE_WEB_PROTEIONS = f'{WEB_DATA_DIR}web_proteins.feather' #蛋白数据
 FILE_WEB_EC = f'{WEB_DATA_DIR}web_ec.feather' #反应数据
 FILE_SUP_SPROT = f'{UNIPROT_DATA_DIR}uniprot_sprot_info.feather' #uniprot 蛋白补充信息
+
+
+#FOLD SEEK 数据
+
+DIR_FOLDSEEK_PDB = f'{DIR_PROJECT_ROOT}/results/intermediate/foldseek/'
 
 
 
