@@ -185,7 +185,7 @@ def get_embeddings(seq_path, split_char, id_field, per_protein, half_precision, 
     prefix = "<fold2AA>" if is_3Di else "<AA2fold>"
 
     # Load model and vocab
-    model, vocab = load_model_and_prepare(half_precision)
+    model, vocab = load_model_and_prepare(half_precision, model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
 
     # Process batches
     return process_batches(sequences, model, vocab, prefix, per_protein, max_residues, max_seq_len, max_batch, torch.device(device))

@@ -137,6 +137,8 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
         dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/ecmethods'
     elif method_type == 'direct':
         dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct'
+    elif method_type == 'structural':
+        dir_path = f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/structural'
     else:
         raise ValueError("Invalid method type. Choose either 'ec' or 'direct'.")
 
@@ -147,6 +149,8 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
     if not os.path.exists(label_file):
         if method_type == 'ec':
             vali_res_file_path = [f'{cfg.DIR_RES_BASELINE}results/ec_methods/{baselineName}/fold{item}.tsv' for item in range(1, 11)]
+        elif method_type == 'structural':
+            vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/structural/{baselineName}_fold{item}.tsv' for item in range(1, 11)]
         else:
             if baselineName in vector_cp_methods:
                 vali_res_file_path = [f'{cfg.DIR_PROJECT_ROOT}/results/intermediate/direct/{baselineName.split("_")[0]}_fold{item}.tsv' for item in range(1, 11)]

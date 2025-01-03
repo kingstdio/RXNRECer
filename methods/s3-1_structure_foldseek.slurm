@@ -33,10 +33,7 @@ echo "Temporary directory: ${TEMP_DIR}"
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 
 # 运行命令
-time foldseek easy-search ${CFG_DIR}/fold${FOLD_NUM}/pdb_test/ ${CFG_DIR}/fold1/DB/fold1 \
-${RESULTS_DIR}/foldseek_res_fold${FOLD_NUM}.m8 ${TEMP_DIR} \
---alignment-type 0 --format-output ${FSEEK_COLS} \
---tmscore-threshold 0.2 --tmalign-hit-order 0 --max-seqs 1000
+time foldseek easy-search ${CFG_DIR}/fold${FOLD_NUM}/pdb_test/ ${CFG_DIR}/fold${FOLD_NUM}/DB/fold${FOLD_NUM} ${RESULTS_DIR}/foldseek_res_fold${FOLD_NUM}.m8 ${TEMP_DIR} --alignment-type 0 --format-output ${FSEEK_COLS} --tmscore-threshold 0.2 --tmalign-hit-order 0 --max-seqs 1000
 
 # 清理任务临时目录（可选，如果需要保留临时文件，注释掉以下行）
 rm -rf ${TEMP_DIR}
