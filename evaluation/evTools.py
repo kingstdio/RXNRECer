@@ -144,7 +144,7 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
 
     # 处理标签数据
     
-    vector_cp_methods = ['unirep_euclidean', 'unirep_cosine', 'esm_euclidean', 'esm_cosine', 't5_euclidean', 't5_cosine']
+    vector_cp_methods = ['unirep_euclidean', 'unirep_cosine', 'esm_euclidean', 'esm_cosine', 't5_euclidean', 't5_cosine', 'tdit5_euclidean', 'tdit5_cosine']
     label_file = f'{dir_path}/{baselineName}_10folds_labels_res.feather'
     if not os.path.exists(label_file):
         if method_type == 'ec':
@@ -202,6 +202,8 @@ def get_eval_results(baselineName, dict_rxn2id, method_type):
             no_rxn_10_fold.to_feather(ec_no_rxn_file)
         else:
             no_rxn_10_fold = pd.read_feather(ec_no_rxn_file)
+            
+        
 
     else:
         no_rxn_10_fold = None

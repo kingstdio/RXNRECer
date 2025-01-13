@@ -98,7 +98,9 @@ FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
 FILE_DS_PDB_LIST = f'{DIR_DATASET}/ds_all_pdb_map.feather' # 所有pdb 结构列表
 FILE_DS_3DI_LIST = f'{DIR_DATASET}/ds_all_3di.feather' # 所有pdb 结构列表
-FILE_DS_3DI_EMBEDDING = f'{DIR_DATASET}/ds_all_3di_embedding.feather' # 所有pdb 结构列表
+
+# 3DI
+FILE_EMBD_PROTEIN_TDIT5 = f'{DIR_DATASET}/ds_all_3di_embedding.feather' # 所有pdb 结构列表
 
 FILE_DS_CASE_ECOLI = f'{DATA_ROOT}datasets/case/ds_case_ecoli.feather'
 

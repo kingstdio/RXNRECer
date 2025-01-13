@@ -149,42 +149,56 @@ def pycdhit(uniportid_seq_df, identity=0.4, thred_num=4):
         thred_num (int, optional): 聚类线程数. Defaults to 4.
 
     Returns:
-        聚类结果 DataFrame: [cluster_id,uniprot_id,identity,is_representative,cluster_size]
+        聚类结果 DataFrame: [cluster_id, uniprot_id, identity, is_representative, cluster_size]
     """
-    if identity>=0.7:
-        word_size = 5
-    elif identity>=0.6:
-        word_size = 4
-    elif identity >=0.5:
-        word_size = 3
-    elif identity >=0.4:
-        word_size =2
-    else:
-        word_size = 5
+    if identity < 0.4:
+        raise ValueError('Identity is too low, CD-HIT does not support identity less than 0.4')
 
-    # 定义输入输出文件名
+    # Determine word size based on identity threshold
+    word_size = {0.7: 5, 0.6: 4, 0.5: 3, 0.4: 2}.get(identity, 5)
 
-
-    
-    time_stamp_str = datetime.now().strftime("%Y-%m-%d_%H_%M_%S_")+''.join(random.sample(string.ascii_letters + string.digits, 16))
+    # Generate timestamp and temporary file paths
+    time_stamp_str = datetime.now().strftime("%Y-%m-%d_%H_%M_%S_") + ''.join(random.sample(string.ascii_letters + string.digits, 16))
     cd_hit_fasta = f'{cfg.TEMP_DIR}cdhit_test_{time_stamp_str}.fasta'
     cd_hit_results = f'{cfg.TEMP_DIR}cdhit_results_{time_stamp_str}'
-    cd_hit_cluster_res_file =f'{cfg.TEMP_DIR}cdhit_results_{time_stamp_str}.clstr'
+    cd_hit_cluster_res_file = f'{cfg.TEMP_DIR}cdhit_results_{time_stamp_str}.clstr'
 
-    # 写聚类fasta文件
-    table2fasta(uniportid_seq_df, cd_hit_fasta)
+    try:
+        # Write the input sequences to a FASTA file
+        table2fasta(uniportid_seq_df, cd_hit_fasta)
 
-    # cd-hit聚类
-    cmd = f'cd-hit -i {cd_hit_fasta} -o {cd_hit_results} -c {identity} -n {word_size} -T {thred_num} -M 0 -g 1 -sc 1 -sf 1 > /dev/null 2>&1'
-    os.system(cmd)
-    cdhit_cluster = get_cdhit_results(cdhit_clstr_file=cd_hit_cluster_res_file)
+        # Execute CD-HIT clustering
+        cmd = [
+            'cd-hit', 
+            '-i', cd_hit_fasta,
+            '-o', cd_hit_results,
+            '-c', str(identity),
+            '-n', str(word_size),
+            '-T', str(thred_num),
+            '-M', '0',
+            '-g', '1',
+            '-sc', '1',
+            '-sf', '1'
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    cluster_size = cdhit_cluster.cluster_id.value_counts()
-    cluster_size = pd.DataFrame({'cluster_id':cluster_size.index,'cluster_size':cluster_size.values})
-    cdhit_cluster = cdhit_cluster.merge(cluster_size, on='cluster_id', how='left')
-    
-    cmd = f'rm -f {cd_hit_fasta} {cd_hit_results} {cd_hit_cluster_res_file}'
-    os.system(cmd)
+        # Process the clustering result
+        cdhit_cluster = get_cdhit_results(cdhit_clstr_file=cd_hit_cluster_res_file)
+
+        # Get cluster sizes and merge them with the cluster dataframe
+        cluster_size = cdhit_cluster.cluster_id.value_counts().reset_index(name='cluster_size')
+        cluster_size.rename(columns={'index': 'cluster_id'}, inplace=True)
+        cdhit_cluster = pd.merge(cdhit_cluster, cluster_size, on='cluster_id', how='left')
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error during CD-HIT execution: {e}")
+        raise
+
+    finally:
+        # Clean up temporary files
+        for temp_file in [cd_hit_fasta, cd_hit_results, cd_hit_cluster_res_file]:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
     return cdhit_cluster
 

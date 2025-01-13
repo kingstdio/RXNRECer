@@ -4,7 +4,6 @@ import numpy as np
 import argparse
 import concurrent.futures
 import warnings
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 # Adding the project directory to system path for imports
@@ -18,7 +17,8 @@ import modules.simi_caculator as simitool
 dict_feature_path = {
     'esm': cfg.FILE_EMBD_PROTEIN_ESM2_L33_650M,
     'unirep': cfg.FILE_EMBD_PROTEIN_UNIREP,
-    't5': cfg.FILE_EMBD_PROTEIN_T5_SEQ
+    't5': cfg.FILE_EMBD_PROTEIN_T5_SEQ,
+    'tdit5':cfg.FILE_EMBD_PROTEIN_TDIT5
 }
 
 # Function to load features from a given method
@@ -28,7 +28,8 @@ def load_feature(method):
     feature = feature.rename(columns={
         'rep33': 'features' if method == 'esm' else None,
         'unirep': 'features' if method == 'unirep' else None,
-        't5_per_protein': 'features' if method == 't5' else None
+        't5_per_protein': 'features' if method == 't5' else None,
+        'tdit5':'features' if method == 'tdit5' else None
     }).dropna(axis=1, how='all')
     print(f'{method} features loaded, shape: {feature.shape}')
     return feature[['uniprot_id', 'features']]
@@ -117,7 +118,9 @@ def run_fold(fold_num: int, embd_methd: str):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run Blast and DeepEC Evaluation")
     parser.add_argument('--foldnum', type=int, default=1, help='Fold number to run')
-    parser.add_argument('--embdmethod', type=str, default='esm', choices=['esm', 'unirep', 't5'], help='Embedding method to use')
+    parser.add_argument('--embdmethod', type=str, default='tdit5', choices=['esm', 'unirep', 't5', 'tdit5'], help='Embedding method to use')
     args = parser.parse_args()
 
     run_fold(fold_num=args.foldnum, embd_methd=args.embdmethod)
+    
+    # python s4-1_simi_protein_10_fold.py --foldnum 2 --embdmethod tdit5
