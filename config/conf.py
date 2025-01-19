@@ -2,7 +2,7 @@
 Author: Zhenkun Shi
 Date: 2022-04-08 15:57:16
 LastEditors: Zhenkun Shi
-LastEditTime: 2023-10-06 17:11:07
+LastEditTime: 2024-10-06 17:11:07
 FilePath: /preaction/config/conf.py
 Description: 
 
@@ -33,6 +33,7 @@ DIR_RXN_JSON = f'files/rxn_json/'
 DIR_CPD_SVG = f'files/cpd_svg/' 
 # 生产环境结果目录
 DIR_PRODUCTION_RES = f'files/results/'
+FILE_PRODUCTION_FEATURES = f'{DIR_PROJECT_ROOT}/files/features/featureBank.feather'
 
 
 FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DATA_ROOT}model/production_185846best.pth'
@@ -96,11 +97,12 @@ FILE_DS_TEST_FASTA = f'{DIR_DATASET}ds_test.fasta'
 FILE_DS_DICT_RXN2ID = f'{DATA_ROOT}dict/dict_rxn2id.json'
 FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
+
 FILE_DS_PDB_LIST = f'{DIR_DATASET}/ds_all_pdb_map.feather' # 所有pdb 结构列表
 FILE_DS_3DI_LIST = f'{DIR_DATASET}/ds_all_3di.feather' # 所有pdb 结构列表
 
 # 3DI
-FILE_EMBD_PROTEIN_TDIT5 = f'{DIR_DATASET}/ds_all_3di_embedding.feather' # 所有pdb 结构列表
+FILE_EMBD_PROTEIN_TDIT5 = f'{DIR_DATASET}ds_all_3di_embedding.feather' # 所有pdb 结构列表
 
 FILE_DS_CASE_ECOLI = f'{DATA_ROOT}datasets/case/ds_case_ecoli.feather'
 
@@ -115,6 +117,7 @@ FILE_DS_RHEA = f'{DIR_DATASET}ds_rhea.feather'
 # 字典目录
 DIR_DICT = DATA_ROOT +'dict/'
 DICT_LABEL_RHEA = DIR_DICT+'dict_label_rhea.npy'
+DICT_UNIPROT_RHEA = DIR_DICT +'dict_uniprot_rhea.json'
 
 
 # 原始数据
@@ -126,9 +129,7 @@ FILE_SUP_SPROT = f'{UNIPROT_DATA_DIR}uniprot_sprot_info.feather' #uniprot 蛋白
 
 
 #FOLD SEEK 数据
-
 DIR_FOLDSEEK_PDB = f'{DIR_PROJECT_ROOT}/results/intermediate/foldseek/'
-
 
 
 # 训练好的模型
@@ -142,16 +143,9 @@ RESULTS_DIR = DIR_PROJECT_ROOT + '/results/'
 #结果文件
 FILE_RESULTS_MSA = f'{RESULTS_DIR}baselines/exp_test_msa.tsv'
 FILE_RESULTS_SIMI = f'{RESULTS_DIR}exp_test_simi.h5'
-
 FILE_RESULTS_SIMI_ESM = f'{RESULTS_DIR}simi/exp_test_esm.h5'
 FILE_RESULTS_SIMI_UNIREP = f'{RESULTS_DIR}simi/exp_test_unirep.h5'
 FILE_RESULTS_SIMI_T5 = f'{RESULTS_DIR}simi/exp_test_t5.h5'
-
-FILE_RESULTS_SIMI_ESM_REACTION = f'{RESULTS_DIR}simi/exp_test_esm_reaction.h5'
-FILE_RESULTS_SIMI_UNIREP_REACTION = f'{RESULTS_DIR}simi/exp_test_unirep_reaction.h5'
-FILE_RESULTS_SIMI_T5_REACTION = f'{RESULTS_DIR}simi/exp_test_t5_reaction.h5'
-
-
 FILE_RESULTS_APLF = f'{RESULTS_DIR}exp_test_aplf.xlsx'
 FILE_RESULTS_APLF_AP = f'{RESULTS_DIR}exp_test_aplf_ap.tsv'
 
@@ -159,16 +153,20 @@ FILE_RESULTS_APLF_AP = f'{RESULTS_DIR}exp_test_aplf_ap.tsv'
 #EC-based Results
 DIR_RES_BASELINE = f'{DIR_PROJECT_ROOT}/baselines/'
 
+# Case RESULTS 2018later 
+CASE_DIR = f'{DIR_PROJECT_ROOT}/case/'
+CASE_2018LATER = f'{CASE_DIR}2018later/'
+# EC-based methods
+FILE_CASE_RESULTS_BLAST_EC = f'{CASE_2018LATER}res/exp_test_blast_ec.tsv'
+FILE_CASE_RESULTS_DEEPEC = f'{CASE_2018LATER}res/exp_test_deepec.tsv'
+FILE_CASE_RESULTS_CLEAN = f'{CASE_2018LATER}res/exp_test_clean.tsv'
+FILE_CASE_RESULTS_ECRECER = f'{CASE_2018LATER}res/exp_test_ecrecer.tsv'
+FILE_CASE_RESULTS_ECPRED = f'{CASE_2018LATER}res/exp_test_ecpred.tsv'
+FILE_CASE_RESULTS_CATFAM = f'{CASE_2018LATER}res/exp_test_catfam.tsv'
+FILE_CASE_RESULTS_PRIAM = f'{CASE_2018LATER}res/exp_test_priam.tsv'
 
-FILE_RESULTS_DEEPEC = f'{RESULTS_DIR}baselines/exp_test_deepec.tsv'
-FILE_RESULTS_CLEAN = f'{RESULTS_DIR}baselines/exp_test_clean.tsv'
-FILE_RESULTS_ECRECER = f'{RESULTS_DIR}baselines/exp_test_ecrecer.tsv'
-FILE_RESULTS_ECPRED = f'{RESULTS_DIR}baselines/exp_test_ecpred.tsv'
-FILE_RESULTS_BLAST_EC = f'{RESULTS_DIR}baselines/exp_test_blast_ec.tsv'
-FILE_RESULTS_CATFAM = f'{RESULTS_DIR}baselines/exp_test_catfam.tsv'
-FILE_RESULTS_PRIAM = f'{RESULTS_DIR}baselines/exp_test_priam.tsv'
-
-
-
-
-FILE_RESULTS_BLAST_DIRECT = f'{RESULTS_DIR}baselines/exp_test_blast_direct.tsv'
+#Direct methods
+FILE_CASE_RESULTS_BLAST_DIRECT = f'{CASE_2018LATER}res/exp_test_blast_direct.tsv'
+FILE_CASE_RESULTS_SIMI_ESM_REACTION = f'{CASE_2018LATER}res/exp_test_esm_reaction.h5'
+FILE_CASE_RESULTS_SIMI_UNIREP_REACTION = f'{CASE_2018LATER}res/exp_test_unirep_reaction.h5'
+FILE_CASE_RESULTS_SIMI_T5_REACTION = f'{CASE_2018LATER}res/exp_test_t5_reaction.h5'

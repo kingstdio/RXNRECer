@@ -147,51 +147,6 @@ class BGRU(nn.Module):
         return output,output1
 
 
-# #region  predict reactions with trained model using protein sequences
-# def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size=512, device=torch.device("cpu"), seq_cut_threshold=10000):
-    
-#     data_loader = DataLoader(sequences, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-           
-#     # 加载已保存模型
-#     state_dict = torch.load(model_weight_path, map_location=device, weights_only=True)
-#     model.load_state_dict({k.replace("module.", ""): v for k, v in state_dict.items()})
-#     model.to(device)
-
-#     # 加载字典
-#     with open(dict_path, 'r') as f:
-#         rhea_dict = json.load(f)
-
-#     # 获取模型预测结果
-#     model.eval()
-#     all_reactions = []
-    
-#     predictions = []
-#     with torch.no_grad():
-#         for batch_x in tqdm(data_loader, desc="Predicting reactions"):
-            
-#             batch_x = [seq[:seq_cut_threshold] for seq in batch_x]
-            
-#             outputs = model(batch_x)[0]
-#             sigmoid_outputs = torch.sigmoid(outputs)
-#             y_preds = (sigmoid_outputs > 0.5).int().cpu().tolist()
-
-#             # 更新标签：确保每个样本至少有一个标签
-#             for j, pred in enumerate(y_preds):
-#                 if sum(pred) == 0:  # 如果没有大于0.5的标签
-#                     max_index = torch.argmax(sigmoid_outputs[j]).item()  # 找到最大值的索引
-#                     y_preds[j][max_index] = 1  # 将对应的标签设为1
-                    
-#             reactions = [
-#                 ';'.join(rhea_dict[str(index)] for index, value in enumerate(pred) if value != 0)
-#                 for pred in y_preds
-#             ]
-                     
-#             all_reactions.extend(reactions)
-            
-#         return all_reactions
-# #endregion
-
-
 #region  predict reactions with trained model using protein sequences
 def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size=512, device=torch.device("cpu"), seq_cut_threshold=10000):
     
@@ -226,17 +181,22 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
                 if sum(pred) == 0:  # 如果没有大于0.5的标签
                     max_index = torch.argmax(sigmoid_outputs[j]).item()  # 找到最大值的索引
                     y_preds[j][max_index] = 1  # 将对应的标签设为1
-                    
+ 
             reactions = [
                 ';'.join(rhea_dict[str(index)] for index, value in enumerate(pred) if value != 0)
                 for pred in y_preds
             ]
-            
+            # 过滤['-;RHEA:29675', '-;RHEA:35647'] 没反应+反应的形式
+            reactions = [item.replace('-;','') for item in reactions]
             probabilities = [
                 {rhea_dict[str(index)]: round(sigmoid_outputs[i][index].item(), 6) for index, value in enumerate(pred) if value != 0}
                 for i, pred in enumerate(y_preds)
             ]
-                                 
+            # 过滤{'-': 0.56048, 'RHEA:35647': 0.738104} 没反应+反应的形式对应的probabilities
+            for item in probabilities:
+                if len(item) > 1 and '-' in item:
+                    item.pop('-', None)
+         
             all_reactions.extend(reactions)
             all_probabilities.extend(probabilities)
             
