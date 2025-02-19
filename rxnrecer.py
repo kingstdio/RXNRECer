@@ -9,10 +9,8 @@ from Bio import SeqIO
 import torch
 import argparse
 import hashlib
-from modules.embedding import seqEmbedding as ebdseq
-from modules.embedding import t5Embedding as ebdt5
 import modules.simi_caculator as simitool
-import time
+from modules.predict import predRXN
 from tqdm import tqdm
 from collections import defaultdict
 from methods import Mactive
@@ -132,7 +130,7 @@ def load_data(input_data):
 #endregion 
 
 #region 2. 保存计算结果
-def save_data(resdf,output_file, output_format='tsv'):
+def save_data(resdf, output_file, output_format='tsv'):
     """
     保存结果到文件 (TSV/JSON)
     resdf: DataFrame 格式的结果
@@ -165,10 +163,6 @@ def step_by_step_prediction(input_data,
     print('Step 2: Loading predictive model')
     model, mcfg = load_model() 
     
-    if Ensemble:
-        featureBank = pd.read_feather(cfg.FILE_PRODUCTION_FEATURES)
-    else:
-        featureBank = None
         
     res = []
     
@@ -189,11 +183,13 @@ def step_by_step_prediction(input_data,
             res_batch = single_batch_run_prediction(batch_data,
                                                 model=model,
                                                 mcfg=mcfg,
-                                                featureBank=featureBank,
                                                 getEquation=getEquation,
-                                                Ensemble=Ensemble)
+                                                 Ensemble=Ensemble)
             res = res + [res_batch]  # Use extend for better performance
     fres = pd.concat(res, axis=0, ignore_index=True)
+    
+
+    
     
     if output_file is not None:
         print(f'Step 5: Saving results to {output_file} (format={output_format})')
@@ -203,7 +199,7 @@ def step_by_step_prediction(input_data,
 
 
 #region RXNRECer 预测API
-def single_batch_run_prediction(input_df, model, mcfg, featureBank=None, getEquation=False, Ensemble = False):
+def single_batch_run_prediction(input_df, model, mcfg, getEquation=False, Ensemble=False):
     """
     对输入的 DataFrame 进行 RXNRECer 预测，并返回预测结果 DataFrame。
     可选参数:
@@ -215,31 +211,26 @@ def single_batch_run_prediction(input_df, model, mcfg, featureBank=None, getEqua
       - Ensemble: 是否使用集成学习方法
     """
     input_df = input_df.reset_index(drop=True)
-    
-    data_hash = hashlib.md5(input_df.to_string().encode('utf-8')).hexdigest()
-    if os.path.exists(f'{cfg.TEMP_DIR}{data_hash}_rxnrecer.feather'):
-        resdf = pd.read_feather(f'{cfg.TEMP_DIR}{data_hash}_rxnrecer.feather')
-    else:
-        res, res_prob = Mactive.predict_sequences(
-            model=model,
-            sequences=input_df.seq,
-            model_weight_path=mcfg.model_weight_path,
-            dict_path=mcfg.dict_path,
-            batch_size=2,
-            device=mcfg.device
-        )
-        # 整合预测结果
-        # 注意：如果想保留原来所有列，可以在 input_df.copy() 的基础上再拼结果
-        resdf = input_df[['uniprot_id']].reset_index(drop=True).copy()
-        resdf['RXNRECer'] = res
-        resdf['RXNRECer_with_prob'] = res_prob
-        resdf = resdf.rename(columns={'uniprot_id': 'input_id'})
-        
-        resdf.to_feather(f'{cfg.TEMP_DIR}{data_hash}_rxnrecer.feather')
 
+    res, res_prob = Mactive.predict_sequences(
+        model=model,
+        sequences=input_df.seq,
+        model_weight_path=mcfg.model_weight_path,
+        dict_path=mcfg.dict_path,
+        batch_size=2,
+        device=mcfg.device
+    )
+    # 整合预测结果
+    # 注意：如果想保留原来所有列，可以在 input_df.copy() 的基础上再拼结果
+    resdf = input_df[['uniprot_id']].reset_index(drop=True).copy()
+    resdf['RXNRECer'] = res
+    resdf['RXNRECer_with_prob'] = res_prob
+    resdf = resdf.rename(columns={'uniprot_id': 'input_id'})
+        
+        
     # 如果需要从“Rhea reaction 数据库”中查方程式，则执行
     if getEquation:
-        print('Step 4.1: Fetching reaction equations (RHEA) ...')
+        print('Fetching reaction equations (RHEA) ...')
         RXNs = pd.read_feather(cfg.FILE_DS_RHEA_REACTIONS)  # 需提前定义 cfg.FILE_DS_RHEA_REACTIONS
         # RXNs 中需至少包含：reaction_id, equation, equation_chebi, ...
         def fetch_equations(rxn_string):
@@ -259,150 +250,123 @@ def single_batch_run_prediction(input_df, model, mcfg, featureBank=None, getEqua
         resdf['equations'] = resdf['RXNRECer'].apply(fetch_equations)
         resdf['equations_chebi'] = resdf['RXNRECer'].apply(fetch_equations_chebi)
         
+        # 集成学习
     if Ensemble:
-        path_rxnrecer_ensemble = f'{cfg.TEMP_DIR}{data_hash}_rxnrecer_ensemble.pkl'
-        if os.path.exists(path_rxnrecer_ensemble):
-            baggingdf = pd.read_pickle(path_rxnrecer_ensemble)
-        else:
-            res_simi = simi_bagging(input_df, featureBank, topk=1)
-            baggingdf = res_simi.merge(resdf, left_on='uniprot_id', right_on='input_id', how='left')
-            baggingdf.to_pickle(path_rxnrecer_ensemble)
-        
-        baggingdf.drop(['input_id'], axis=1, inplace=True)
-        baggingdf['ensemble'] = baggingdf.apply(lambda x: integrateEnsemble(x.esm, x.t5, x.RXNRECer_with_prob), axis=1)
-        
-        return baggingdf
-
-    
+        resdf = get_ensemble(input_df=input_df[['uniprot_id', 'seq']], rxnrecer_df=resdf)
     return resdf
 #endregion
 
 
 
-# Function to calculate similarity between protein features
-def get_top_protein_simi(x_feature, y_feature, y_uniprot_id, dict_featureBank,dict_uniprot2rhea, topk):
-    future_cosine = simitool.get_cosine_similarity(x_feature, y_feature)        #计算矩阵相似性
-    future_cosine = future_cosine.transpose()   
-    topk_indices = np.argsort(future_cosine, axis=1)[:, -topk:][:, ::-1]        #查找概率最大的位置
-    topk_values = np.round(np.take_along_axis(future_cosine, topk_indices, axis=1), 6)  #找对应位置的概率
-    
-    #找到对应位置对应的Uniprot_id
-    simi_uniprot_id = list(map(dict_featureBank.get, topk_indices.flatten()))
-    simi_rhea = list(map(dict_uniprot2rhea.get, simi_uniprot_id))
-    result_matrix = np.empty(len(simi_uniprot_id), dtype=object)
-    #和概率打包成tuple
-    result_matrix[:] = list(zip(simi_rhea, topk_values.flatten()))
-    # Reshape to the original shape
-    result_matrix = result_matrix.reshape(topk_indices.shape)
-    # Create the DataFrame
-    res = pd.DataFrame({
-        'uniprot_id': y_uniprot_id,
-        'simi': list(result_matrix)
-    })
 
-    return res
+def get_ensemble(input_df, rxnrecer_df):
+        res_msa = predRXN.getmsa(df_test=input_df, k=1)
+        res_catfam = predRXN.getcatfam(df_test=input_df)
+        res_ecrecer = predRXN.getecrecer(df_test=input_df)
+        res_rxnrecer = rxnrecer_df.copy().rename(columns={'input_id': 'uniprot_id'})
+        res_t5 = predRXN.getT5(df_test=input_df, topk=1)
+
+        baggingdf = res_rxnrecer.merge(
+                    res_msa[['uniprot_id', 'rxn_msa']], on='uniprot_id', how='left').merge(
+                    res_catfam[['uniprot_id', 'rxn_catfam']], on='uniprot_id', how='left').merge(
+                    res_ecrecer[['uniprot_id', 'rxn_ecrecer']], on='uniprot_id', how='left').merge(
+                    res_t5, on='uniprot_id', how='left')
+        
+        baggingdf = baggingdf.replace('NO-PREDICTION', '-')
+        baggingdf = baggingdf.replace('None','-')
+        baggingdf = baggingdf.fillna('-')
+        
+        baggingdf['ensemble'] = baggingdf.apply(lambda x: integrateEnsemble(esm=x.esm,
+                             t5=x.t5, 
+                             rxn_recer=x.RXNRECer_with_prob, 
+                             rxn_msa=x.rxn_msa, 
+                             rxn_catfam=x.rxn_catfam,
+                             rxn_ecrecer=x.rxn_ecrecer), axis=1)
+        
+       
+        baggingdf['RXNRECer']=baggingdf.ensemble.apply(lambda x:(cfg.SPLITER).join(x.keys()))
+        baggingdf['RXNRECer_with_prob']=baggingdf.ensemble.copy()
+        
+        baggingdf = baggingdf.rename(columns={'uniprot_id': 'input_id'})
+       
+        return baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']]
+    
+    
+
+def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
+    """
+    整合不同来源的 RHEA ID 概率，优先保留较高的概率值，并对单个 RHEA ID 进行归并。
+    
+    参数:
+        esm: 包含 (RHEA_IDs, 概率) 的元组列表，这里取第一个元素
+        t5: 包含 (RHEA_IDs, 概率) 的元组列表，这里取第一个元素
+        rxn_recer: 字典，键为 RHEA_ID，值为对应的概率
+        rxn_msa: 字符串，MSA 方法产生的 RHEA ID（可能包含多个，用分号分隔）
+        rxn_catfam: 字符串，分类家族方法产生的 RHEA ID（可能包含多个，用分号分隔）
+        rxn_ecrecer: 字符串，EC 方法产生的 RHEA ID（可能包含多个，用分号分隔）
+    
+    返回:
+        dict: 以单个 RHEA ID 为键，对应最大概率为值的字典，按概率降序排序
+    """
+    # -------------------------------
+    # 1. 聚合 esm 与 t5 的预测结果
+    # -------------------------------
+    # 使用 defaultdict(list) 将同一组（可能包含多个 RHEA ID，以分号分隔）的概率收集在一起
+    aggregated = defaultdict(list)
+    for prediction in (esm[0], t5[0]):
+        # 如果 RHEA ID 为 None，则替换为 '-' 以保持一致性
+        rhea_ids = prediction[0] if prediction[0] is not None else '-'
+        aggregated[rhea_ids].append(prediction[1])
+    
+    # -------------------------------
+    # 2. 添加 rxn_recer 的预测结果
+    # -------------------------------
+    # 同样确保 None 替换为 '-'
+    for rhea_id, prob in rxn_recer.items():
+        key = rhea_id if rhea_id is not None else '-'
+        aggregated[key].append(prob)
+    
+    # -------------------------------
+    # 3. 计算每组 RHEA ID 的最高概率
+    # -------------------------------
+    # aggregated 的键可能包含多个 RHEA ID（如 "ID1;ID2"），此处对每组取最大概率
+    group_max_prob = {group: max(probs) for group, probs in aggregated.items()}
+    
+    # -------------------------------
+    # 4. 将 RHEA ID 组拆分成单个 RHEA ID，并保留较高概率
+    # -------------------------------
+    direct_prob = {}
+    for group, prob in group_max_prob.items():
+        # 拆分可能由分号连接的多个 RHEA ID
+        for rhea_id in group.split(';'):
+            # 如果同一 RHEA ID 来自多个组，保留概率较大的那个
+            direct_prob[rhea_id] = max(direct_prob.get(rhea_id, 0), prob)
+    
+    # -------------------------------
+    # 5. 构建 EC 方法手动添加的 RHEA ID 字典
+    # -------------------------------
+    # 将 rxn_msa, rxn_catfam, rxn_ecrecer 三个字符串拼接后，以分号拆分，得到唯一的 RHEA ID 集合
+    ec_ids = set(f"{rxn_msa};{rxn_catfam};{rxn_ecrecer}".split(';'))
+    # 对每个 EC 方法产生的 RHEA ID 赋予固定概率 0.7777
+    ec_prob = {rhea_id: 0.7777 for rhea_id in ec_ids}
+    
+    # -------------------------------
+    # 6. 合并来自 direct_prob 与 ec_prob 的结果
+    # -------------------------------
+    # 对于相同的 RHEA ID，取两边概率中的较大值
+    merged_probs = {}
+    for mapping in (ec_prob, direct_prob):
+        for rhea_id, prob in mapping.items():
+            merged_probs[rhea_id] = max(merged_probs.get(rhea_id, 0), prob)
+    
+    # -------------------------------
+    # 7. 按概率降序排序并返回结果
+    # -------------------------------
+    sorted_result = dict(sorted(merged_probs.items(), key=lambda item: item[1], reverse=True))
+    return sorted_result
 
 
-def integrateEnsemble(esm, t5, rxnrecer):
-    # Create a dictionary to store all RHEA identifier groups and their probabilities
-    merged_dict = defaultdict(list)
-    tuples = [esm[0], t5[0]]
-    
-    # Process each tuple (RHEA IDs and Probabilities)
-    for rhea_ids, prob in tuples:
-        # Replace None with '-' to ensure they are treated the same
-        rhea_ids = rhea_ids if rhea_ids is not None else '-'
-        merged_dict[rhea_ids].append(prob)
-    
-    # Add dictionary data (it already maps RHEA IDs to probabilities)
-    for rhea_id, prob in rxnrecer.items():
-        # Replace None with '-' for consistency
-        rhea_id = rhea_id if rhea_id is not None else '-'
-        merged_dict[rhea_id].append(prob)
-    
-    # For each group of RHEA IDs, we keep the highest probability
-    final_result = {}
-    for rhea_ids, probs in merged_dict.items():
-        final_result[rhea_ids] = max(probs)  # Keep the maximum probability for each group
-    
-    return final_result
 
-
-def simi_bagging(input_df, featureBank, topk=3):
-    dict_featureBank = pd.Series( featureBank['uniprot_id'],featureBank.index.values).to_dict()
-    
-    # 从 JSON 文件加载字典数据
-    with open(cfg.DICT_UNIPROT_RHEA, "r") as json_file:
-        dict_uniprot2rhea = json.load(json_file)
-        
-    #hash 数据作为文件名    
-    data_hash = hashlib.md5(input_df.to_string().encode('utf-8')).hexdigest()
-    
-    # ESM embedding   
-    if os.path.exists(f'{cfg.TEMP_DIR}{data_hash}_esm.feather'):
-        embd_esm = pd.read_feather(f'{cfg.TEMP_DIR}{data_hash}_esm.feather')
-    else:
-        embd_esm = ebdseq.getEsm(input_df.rename(columns={'uniprot_id':'id'}))
-        embd_esm.to_feather(f'{cfg.TEMP_DIR}{data_hash}_esm.feather')
-    # ESM similarity
-    path_simi_esm = f'{cfg.TEMP_DIR}{data_hash}_simi_esm.pkl'
-    if os.path.exists(path_simi_esm):
-        esm_cos = pd.read_pickle(path_simi_esm)
-    else:
-        esm_cos =  get_top_protein_simi(x_feature=np.vstack(featureBank.esm), 
-                                        y_feature=np.vstack(embd_esm.esm), 
-                                        y_uniprot_id=embd_esm.id, 
-                                        dict_featureBank=dict_featureBank, 
-                                        dict_uniprot2rhea = dict_uniprot2rhea,
-                                        topk=topk).rename(columns={'simi':'esm'})
-        esm_cos.to_pickle(path_simi_esm)
-        
-        
-    # # Unirep embedding
-    # if os.path.exists(f'{cfg.TEMP_DIR}{data_hash}_unirep.feather'):
-    #     embd_unirep = pd.read_feather(f'{cfg.TEMP_DIR}{data_hash}_unirep.feather')
-    # else:
-    #     embd_unirep=ebdseq.getUnirep(input_df.rename(columns={'uniprot_id':'id'}), batch_size=40)
-    #     embd_unirep.to_feather(f'{cfg.TEMP_DIR}{data_hash}_unirep.feather')
-    # # Unirep similarity
-    # path_simi_unirep = f'{cfg.TEMP_DIR}{data_hash}_simi_unirep.pkl'
-    # if os.path.exists(path_simi_unirep):
-    #     unirep_cos = pd.read_pickle(path_simi_unirep)
-    # else:
-    #     unirep_cos =  get_top_protein_simi(x_feature=np.vstack(featureBank.unirep), 
-    #                                     y_feature=np.vstack(embd_unirep.unirep), 
-    #                                     y_uniprot_id=embd_unirep.id, 
-    #                                     dict_featureBank=dict_featureBank, 
-    #                                     dict_uniprot2rhea = dict_uniprot2rhea,
-    #                                     topk=topk).rename(columns={'simi':'unirep'})
-    #     unirep_cos.to_pickle(path_simi_unirep)
-        
-        
-        
-    # T5 Embedding    
-    if os.path.exists(f'{cfg.TEMP_DIR}{data_hash}_t5.feather'):
-        embd_t5 = pd.read_feather(f'{cfg.TEMP_DIR}{data_hash}_t5.feather')
-    else:
-        embd_t5 = ebdt5.get_embd_seq(seqdfwithid=input_df.rename(columns={'uniprot_id':'id'}), batch_szise=20)
-        embd_t5.to_feather(f'{cfg.TEMP_DIR}{data_hash}_t5.feather')
-    # T5 similarity
-    path_simi_t5 = f'{cfg.TEMP_DIR}{data_hash}_simi_t5.pkl'
-    if os.path.exists(path_simi_t5):
-        t5_cos = pd.read_pickle(path_simi_t5)
-    else:
-        t5_cos =  get_top_protein_simi(x_feature=np.vstack(featureBank.t5), 
-                                    y_feature=np.vstack(embd_t5.t5), 
-                                    y_uniprot_id=embd_t5.id, 
-                                    dict_featureBank=dict_featureBank, 
-                                    dict_uniprot2rhea = dict_uniprot2rhea,
-                                    topk=topk).rename(columns={'simi':'t5'})
-        t5_cos.to_pickle(path_simi_t5)
-    
-    
-    
-    res = esm_cos.merge(t5_cos, on='uniprot_id', how='left')
-    
-    return res
         
     
 

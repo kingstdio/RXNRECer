@@ -34,6 +34,7 @@ DIR_CPD_SVG = f'files/cpd_svg/'
 # 生产环境结果目录
 DIR_PRODUCTION_RES = f'files/results/'
 FILE_PRODUCTION_FEATURES = f'{DIR_PROJECT_ROOT}/files/features/featureBank.feather'
+FILE_PRODUCTION_FEATURES_T5 = f'{DIR_PROJECT_ROOT}/files/features/featureBank_t5.feather'
 
 
 FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DATA_ROOT}model/production_185846best.pth'
@@ -97,6 +98,7 @@ FILE_DS_TEST_FASTA = f'{DIR_DATASET}ds_test.fasta'
 FILE_DS_DICT_RXN2ID = f'{DATA_ROOT}dict/dict_rxn2id.json'
 FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
+FILE_DS_DMND = f'{DATA_ROOT}datasets/task240524/ds_train.dmnd'
 
 FILE_DS_PDB_LIST = f'{DIR_DATASET}/ds_all_pdb_map.feather' # 所有pdb 结构列表
 FILE_DS_3DI_LIST = f'{DIR_DATASET}/ds_all_3di.feather' # 所有pdb 结构列表
@@ -118,6 +120,8 @@ FILE_DS_RHEA = f'{DIR_DATASET}ds_rhea.feather'
 DIR_DICT = DATA_ROOT +'dict/'
 DICT_LABEL_RHEA = DIR_DICT+'dict_label_rhea.npy'
 DICT_UNIPROT_RHEA = DIR_DICT +'dict_uniprot_rhea.json'
+DICT_EC_RHEA = DIR_DICT +'dict_ec_rhea.json'
+DICT_RHEA_EC = DIR_DICT +'dict_rhea_ec.json'
 
 
 # 原始数据
@@ -170,3 +174,4 @@ FILE_CASE_RESULTS_BLAST_DIRECT = f'{CASE_2018LATER}res/exp_test_blast_direct.tsv
 FILE_CASE_RESULTS_SIMI_ESM_REACTION = f'{CASE_2018LATER}res/exp_test_esm_reaction.h5'
 FILE_CASE_RESULTS_SIMI_UNIREP_REACTION = f'{CASE_2018LATER}res/exp_test_unirep_reaction.h5'
 FILE_CASE_RESULTS_SIMI_T5_REACTION = f'{CASE_2018LATER}res/exp_test_t5_reaction.h5'
+FILE_CASE_RESULTS_RXNRECER_REACTION = f'{CASE_2018LATER}res/exp_test_rxnrecer_reaction.feather'

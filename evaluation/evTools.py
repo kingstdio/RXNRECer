@@ -358,6 +358,148 @@ def show_ec_methods_10_eva_fig(res_metrics_data):
 
 
 
+def show_methods_eva_fig(res_metrics_data):
+    """
+    绘制不同方法在各评价指标上的柱状图，不显示方差（误差条）。
+
+    参数:
+        res_metrics_data: pd.DataFrame，要求包含如下列：
+            - baselineName: 方法名称
+            - avgType: 均值类型（例如 'micro'）
+            - methodGroup: 方法分组，如 "direct" 或 "ec"
+            - mAccuracy, mPrecision, mRecall, mF1: 各评价指标的均值
+
+    返回:
+        fig: plotly.graph_objects.Figure 对象
+    """
+    # ---------------------------
+    # 1. 定义颜色列表
+    # ---------------------------
+    colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', 
+              '#BEB8DC', '#E7DAD2', '#999999', '#A1D3B2', 
+              '#F5C98A', '#F9988C']
+
+    # ---------------------------
+    # 2. 确定方法排序及图形参数
+    # ---------------------------
+    # 初步根据 mF1 值降序排序（假设每个方法只有一行数据）
+    methods_sorted = res_metrics_data.sort_values(by='mF1', ascending=False)['baselineName'].tolist()
+    
+    # 根据方法分组判断是绘制 direct、ec 还是所有方法
+    unique_groups = res_metrics_data['methodGroup'].unique()
+    bar_width = 0.08  # 默认柱宽
+    title_text = ''
+
+    if len(unique_groups) > 1:
+        # 同时存在 direct 和 ec 方法时，采用自定义的排序顺序
+        # direct 方法顺序（按期望顺序排列）
+        direct_order = ["MSA-via-RXN", "Unirep-cosine", "Unirep-euclidean", "ESM-cosine", "ESM-euclidean", "T5-cosine", "T5-euclidean", "RXNRECer"]
+        # ec 方法顺序
+        ec_order = ["PRIAM", "DeepEC", "CLEAN", "CatFam", "MSA-via-EC", "ECRECer"]
+        methods_order = []
+        for m in direct_order:
+            if m in res_metrics_data['baselineName'].values:
+                methods_order.append(m)
+        for m in ec_order:
+            if m in res_metrics_data['baselineName'].values:
+                methods_order.append(m)
+        methods = methods_order
+        bar_width = 0.04
+        title_text = 'Performance Comparison of All Reaction Prediction Methods'
+    elif unique_groups[0] == 'direct':
+        methods = methods_sorted
+        bar_width = 0.08
+        title_text = 'Performance Comparison of Direct Reaction Prediction Methods'
+    else:
+        methods = methods_sorted
+        bar_width = 0.11
+        title_text = 'Performance Comparison of EC-based Reaction Prediction Methods'
+    
+    # 定义 x 轴显示的评价指标
+    metrics = ['mAccuracy', 'mPrecision', 'mRecall', 'mF1']
+
+    # ---------------------------
+    # 3. 构建柱状图
+    # ---------------------------
+    fig = go.Figure()
+
+    # 遍历每个方法，添加对应的柱状图 trace
+    for idx, method in enumerate(methods):
+        # 筛选出当前方法的数据（假设每个 baselineName 只有一行）
+        df_method = res_metrics_data[res_metrics_data['baselineName'] == method]
+        if not df_method.empty:
+            row = df_method.iloc[0]
+            # 从当前行中提取各评价指标的数值
+            y_values = [row[metric] for metric in metrics]
+            fig.add_trace(
+                go.Bar(
+                    name=method,
+                    x=metrics,
+                    y=y_values,
+                    width=bar_width,
+                    marker_color=colors[idx % len(colors)],
+                    marker_line=dict(color='black', width=0.5)
+                    # 注：已去除 error_y 相关设置（不显示方差）
+                )
+            )
+
+    # ---------------------------
+    # 4. 更新图形布局设置
+    # ---------------------------
+    fig.update_layout(
+        yaxis=dict(
+            showline=True,
+            linecolor='black',
+            linewidth=1,
+            showgrid=True,
+            gridcolor='gray',
+            gridwidth=1,
+            minor=dict(
+                showgrid=True,
+                griddash='dash',  # 虚线网格
+                gridcolor='gray',
+                gridwidth=0.5,
+                dtick=0.05
+            ),
+            dtick=0.1,
+            range=[0, 1.2]
+        ),
+        xaxis=dict(
+            showline=True,
+            linecolor='#000000',
+            linewidth=1
+        ),
+        title=dict(
+            text=title_text,
+            x=0.5,
+            y=0.05,  # 标题置于图上方居中
+            xanchor='center',
+            font=dict(
+                size=20,
+                weight=1000
+            )
+        ),
+        yaxis_title='Mean Value',
+        width=1600,
+        height=600,
+        barmode='group',
+        bargap=0.29,  # 柱状图之间的间隔
+        template='plotly_white',
+        legend=dict(
+            orientation="h",  # 水平显示图例
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+            tracegroupgap=2,
+            borderwidth=1,
+        )
+    )
+
+    return fig
+
+
+
 
 
 

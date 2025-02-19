@@ -242,7 +242,7 @@ def make_label(reaction_id, rxn_label_dict):
     # if reaction_id == 'EC-WITHOUT-REACTION':
     #     print('EC-WITHOUT-REACTION')
         
-    # if reaction_id == 'NO-PREDICTION':
+    # if reaction_id == 'NO-PREDICTprintION':
     #     print('NO-PREDICTION')
     
     resArray = [0]*len(rxn_label_dict)
@@ -250,15 +250,16 @@ def make_label(reaction_id, rxn_label_dict):
     reactions = reaction_id.split(';')
     for item in reactions:
         try:
-            array_index = rxn_label_dict.get(item)
+            array_index = rxn_label_dict.get(item.strip())
             if array_index is not None:
-                resArray[rxn_label_dict.get(item)] =1
+                resArray[int(array_index)] =1
             else:
                 # resArray[1704]=1 # 单元素填错
                 # print(reaction_id)
                 resArray = [0]*len(rxn_label_dict)    #如果未找到平均分布到每个类中
         except Exception as e:
-            print(reaction_id + '\n')
+            print(e)
+            print(item)
             
             
     

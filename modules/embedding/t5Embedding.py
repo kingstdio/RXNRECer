@@ -153,7 +153,7 @@ def process_batches(sequences, model, vocab, prefix, per_protein, max_residues, 
     return emb_dict
 
 
-def get_embeddings(seq_path, id_field, per_protein, is_3Di=False, split_char='!', max_residues=4000, max_seq_len=2700, max_batch=40, device='cuda'):
+def get_embeddings(seq_path, id_field, per_protein, is_3Di=False, split_char='!', max_residues=4000, max_seq_len=2701, max_batch=40, device='cuda'):
     """
     Generate embeddings from a FASTA file.
 
@@ -194,8 +194,8 @@ def save(emb_dict, emb_path):
     print(f'File saved to:{emb_path} successfully')
 
 
-def get_embd_seq(seqdfwithid, batch_szise=40):
-    seq_dict = dict(zip(seqdfwithid['id'], seqdfwithid['seq'].str.upper()))
+def get_embd_seq(seqdfwithid, batch_szise=40, max_seq_len=2500):
+    seq_dict = dict(zip(seqdfwithid['id'], seqdfwithid['seq'].str.upper().str[:max_seq_len]))
     sequences = sorted(seq_dict.items(), key=lambda kv: len(kv[1]), reverse=True)
     prefix = '<AA2fold>'
     model, vocab = load_model_and_prepare(model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
