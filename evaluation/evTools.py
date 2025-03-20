@@ -62,6 +62,7 @@ def make_10folds_labels(resdf, columns_dict, rxn_label_dict, fold_num=10):
 # Function to calculate metrics
 def calculate_metrics(eva_df, ground_truth_col, pred_col, eva_name, avg_method='weighted'):
     res =  btools.rxn_eva_metric_with_colName(eva_df=eva_df, col_groundtruth=ground_truth_col, col_pred=pred_col, eva_name=eva_name, average_type=avg_method)
+    res.insert(0, 'evaName', eva_name)
     return res
 
 # 多线程运行评价函数
@@ -245,8 +246,30 @@ def show_ec_methods_10_eva_fig(res_metrics_data):
         # 定义颜色
     colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999', 
             '#A1D3B2',  # 浅绿色，协调#8ECFC9
+            
+            
             '#F5C98A',  # 浅橙色，协调#FFBE7A
             '#F9988C']  # 浅红色，协调#FA7F6F
+    colors = [
+    '#8ECFC9',  # 绿色系
+    '#FFBE7A',  # 橙色系
+    '#FA7F6F',  # 红色系
+    '#82B0D2',  # 蓝色系
+    '#BEB8DC',  # 紫色系
+    '#E7DAD2',  # 米色系
+    '#999999',  # 灰色系
+    '#A1D3B2',  # 浅绿色
+    '#F5C98A',  # 浅橙色
+    '#F9988C',  # 浅红色
+    
+    '#6FB7AA',  # 深绿色，协调 #8ECFC9
+    '#FFA351',  # 深橙色，协调 #FFBE7A
+    '#E45756',  # 深红色，协调 #FA7F6F
+    '#5A9BD4',  # 深蓝色，协调 #82B0D2
+    '#9D81BA',  # 深紫色，协调 #BEB8DC
+    '#C9C1B6'   # 深米色，协调 #E7DAD2
+]
+
 
     # 确保 res_fold_std 按照 F1 值排序，但保留所有度量以便绘图
     # 获取唯一的方法名称

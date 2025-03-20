@@ -174,4 +174,4 @@ FILE_CASE_RESULTS_BLAST_DIRECT = f'{CASE_2018LATER}res/exp_test_blast_direct.tsv
 FILE_CASE_RESULTS_SIMI_ESM_REACTION = f'{CASE_2018LATER}res/exp_test_esm_reaction.h5'
 FILE_CASE_RESULTS_SIMI_UNIREP_REACTION = f'{CASE_2018LATER}res/exp_test_unirep_reaction.h5'
 FILE_CASE_RESULTS_SIMI_T5_REACTION = f'{CASE_2018LATER}res/exp_test_t5_reaction.h5'
-FILE_CASE_RESULTS_RXNRECER_REACTION = f'{CASE_2018LATER}res/exp_test_rxnrecer_reaction.feather'
+FILE_CASE_RESULTS_RXNRECER_REACTION = f'{CASE_2018LATER}res/exp_test_rxnrecer_reaction.pkl'
