@@ -1,14 +1,15 @@
 '''
 Author: Zhenkun Shi
 Date: 2023-04-20 06:23:40
-LastEditors: Zhenkun Shi
-LastEditTime: 2023-05-17 09:44:00
+LastEditors: Zhenkun Shi kingstdio@gmail.com
+LastEditTime: 2025-03-24 18:53:50
 FilePath: /preaction/pjlib/btools.py
 Description: 
 
 Copyright (c) 2023 by tibd, All Rights Reserved. 
 '''
 
+import json
 import pandas as pd
 import numpy as np
 import sys,os
@@ -180,6 +181,7 @@ def load_praim_res(resfile):
 
 def load_catfam_res(resfile):
     res_catfam = pd.read_csv(resfile, sep='\t', names=['id', 'ec_catfam'])
+    res_catfam = res_catfam.groupby('id', as_index=False)['ec_catfam'].agg(lambda x: ';'.join(x.dropna())).replace('', '-')
     return res_catfam
 
 
@@ -205,6 +207,27 @@ def get_simi_Pred(pred_list, uniprot_rxn_dict, topk=3):
     rxn_ids = [uniprot_rxn_dict.get(uniprot_id) for uniprot_id in uniprot_id_list]
     rxn_res = (cfg.SPLITER).join(set(rxn_ids))
     return rxn_res
+
+
+def load_dict_rxn2ec():
+    
+    with open(cfg.DICT_RHEA_EC, 'r') as f:
+        dict_rxn2ec = json.load(f)
+    return dict_rxn2ec
+
+
+def transRXN2EC(rxns, dict_rxn2ec):
+    if rxns=='-':
+        return '-'
+    rxn_list = rxns.split(';')
+    ec_list = []
+    for rxn in rxn_list:
+        if rxn in dict_rxn2ec:
+            ec_list.append(dict_rxn2ec.get(rxn))
+        else:
+            ec_list.append('-')
+            print(f'{rxn} not in dict_rxn2ec')
+    return ';'.join(ec_list)
 
 
 if __name__ =='__main__':

@@ -188,12 +188,12 @@ def step_by_step_prediction(input_data,
             res = res + [res_batch]  # Use extend for better performance
     fres = pd.concat(res, axis=0, ignore_index=True)
     
-
-    
     
     if output_file is not None:
         print(f'Step 5: Saving results to {output_file} (format={output_format})')
         save_data(fres, output_file, output_format)
+        
+    fres = fres.drop_duplicates(subset=['input_id'], keep='first')
     return fres
     
 
