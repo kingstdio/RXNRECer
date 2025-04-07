@@ -1,3 +1,11 @@
+###
+ # @Author: Zhenkun Shi kingstdio@gmail.com
+ # @Date: 2025-03-31 21:06:17
+ # @LastEditors: Zhenkun Shi kingstdio@gmail.com
+ # @LastEditTime: 2025-03-31 21:06:17
+ # @FilePath: /RXNRECer/preprocessing/get_esmfold_pdb.slurm
+ # @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+### 
 #!/bin/bash
 #SBATCH --job-name=rnxrecer-smi-10fold    # 任务名称
 #SBATCH --partition=qgpu_a800            # 分区名称
@@ -16,9 +24,6 @@ INPUT_FILE="chunk${SLURM_ARRAY_TASK_ID}.fasta"
 # 确保输出目录存在
 mkdir -p $OUTPUT_DIR
 
-# 执行命令
-# singularity exec /hpcfs/fpublic/container/singularity/app/esmfold/esmfold.sif \
-#     bash /esmfold.sh -i ${INPUT_DIR}/${INPUT_FILE} -o ${OUTPUT_DIR} --cpu-only
 
 
 singularity exec --nv /hpcfs/fpublic/container/singularity/app/esmfold/esmfold.sif \

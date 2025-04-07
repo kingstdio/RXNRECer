@@ -1,8 +1,8 @@
 '''
 Author: Zhenkun Shi
 Date: 2023-06-21 14:43:20
-LastEditors: Zhenkun Shi
-LastEditTime: 2023-09-22 18:36:56
+LastEditors: Zhenkun Shi kingstdio@gmail.com
+LastEditTime: 2025-04-02 19:30:32
 FilePath: /preaction/tools/filetool.py
 Description: 
 
@@ -138,6 +138,51 @@ def copy(source, target):
     except:
         print("Unexpected error:", sys.exc_info())
         exit(1)
+        
+        
+        
+def cp_pdb_file(src, target):
+    """
+    拷贝PDB文件从源路径到目标路径
+    
+    参数:
+        src (str): 源文件路径
+        target (str): 目标路径(可以是目录或完整文件路径)
+        
+    返回:
+        bool: 拷贝成功返回True，失败返回False
+    """
+    try:
+        # 检查源文件是否存在
+        if not os.path.exists(src):
+            print(f"警告: 源文件不存在，跳过: {src}")
+            return False
+            
+        # 判断目标是目录还是文件路径
+        if os.path.isdir(target):
+            # 目标是目录，使用源文件名
+            target_path = os.path.join(target, os.path.basename(src))
+        else:
+            # 目标是文件路径
+            target_path = target
+            
+        # 创建目标目录(如果不存在)
+        target_dir = os.path.dirname(target_path)
+        if target_dir:  # 防止空目录(当target是当前目录时)
+            os.makedirs(target_dir, exist_ok=True)
+            
+        # 执行拷贝
+        shutil.copy2(src, target_path)  # 使用copy2保留元数据
+        return True
+        
+    except PermissionError:
+        print(f"错误: 没有权限访问文件: {src} 或 {target}")
+    except shutil.SameFileError:
+        print(f"警告: 源和目标相同，跳过: {src}")
+    except Exception as e:
+        print(f"错误: 拷贝文件时发生意外错误: {e}")
+    
+    return False
 
 def delete(filepath):
     """删除文件
