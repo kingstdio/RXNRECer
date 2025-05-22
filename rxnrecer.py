@@ -256,41 +256,94 @@ def single_batch_run_prediction(input_df, model, mcfg, getEquation=False, Ensemb
     return resdf
 #endregion
 
+#region 集成时处理酶和非酶混合情况
+def res_refinement(rxn_prob):
+    """
+    精炼酶预测反应结果，规则：
+    1. 只有一个结果（无论是否为非酶），直接保留
+    2. 如果 '-' 是最大概率项，则认为是非酶，保留 '-'
+    3. 如果 '-' 是最小概率项或居中（非最大非最小），则删除 '-'
+    """
+    if len(rxn_prob) == 1:
+        return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
 
+    sorted_items = sorted(rxn_prob.items(), key=lambda x: x[1], reverse=True)
+
+    # 如果 '-' 是最高概率项 → 非酶，保留
+    if sorted_items[0][0] == '-':
+        return '-', {'-': rxn_prob['-']}
+
+    # 如果 '-' 存在且不是最高项 → 无论居中或最小，统一删除
+    if '-' in rxn_prob:
+        rxn_prob.pop('-')
+
+    return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
+#endregion
 
 
 def get_ensemble(input_df, rxnrecer_df):
-        res_msa = predRXN.getmsa(df_test=input_df, k=1)
-        res_catfam = predRXN.getcatfam(df_test=input_df)
-        res_ecrecer = predRXN.getecrecer(df_test=input_df)
-        res_rxnrecer = rxnrecer_df.copy().rename(columns={'input_id': 'uniprot_id'})
-        res_t5 = predRXN.getT5(df_test=input_df, topk=1)
+    """
+    融合多个方法对蛋白进行反应预测，生成集成预测结果，并处理酶/非酶混合情况。
 
-        baggingdf = res_rxnrecer.merge(
-                    res_msa[['uniprot_id', 'rxn_msa']], on='uniprot_id', how='left').merge(
-                    res_catfam[['uniprot_id', 'rxn_catfam']], on='uniprot_id', how='left').merge(
-                    res_ecrecer[['uniprot_id', 'rxn_ecrecer']], on='uniprot_id', how='left').merge(
-                    res_t5, on='uniprot_id', how='left')
-        
-        baggingdf = baggingdf.replace('NO-PREDICTION', '-')
-        baggingdf = baggingdf.replace('None','-')
-        baggingdf = baggingdf.fillna('-')
-        
-        baggingdf['ensemble'] = baggingdf.apply(lambda x: integrateEnsemble(esm=x.esm,
-                             t5=x.t5, 
-                             rxn_recer=x.RXNRECer_with_prob, 
-                             rxn_msa=x.rxn_msa, 
-                             rxn_catfam=x.rxn_catfam,
-                             rxn_ecrecer=x.rxn_ecrecer), axis=1)
-        
-       
-        baggingdf['RXNRECer']=baggingdf.ensemble.apply(lambda x:(cfg.SPLITER).join(x.keys()))
-        baggingdf['RXNRECer_with_prob']=baggingdf.ensemble.copy()
-        
-        baggingdf = baggingdf.rename(columns={'uniprot_id': 'input_id'})
-       
-        return baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']]
-    
+    输入参数：
+    - input_df: 待预测的蛋白信息（DataFrame），需包含 'uniprot_id' 列
+    - rxnrecer_df: RXNRECer 预测结果（DataFrame），需包含 'input_id' 和 'RXNRECer_with_prob' 列
+
+    返回：
+    - res_df: 仅包含 input_id、融合预测字符串（RXNRECer）和概率字典（RXNRECer_with_prob）的 DataFrame
+    """
+
+    # 调用各个预测方法（MSA、CatFam、ECRECer、T5、RXNRECer）
+    res_msa = predRXN.getmsa(df_test=input_df, k=1)
+    res_catfam = predRXN.getcatfam(df_test=input_df)
+    res_ecrecer = predRXN.getecrecer(df_test=input_df)
+    res_t5 = predRXN.getT5(df_test=input_df, topk=1)
+    res_rxnrecer = rxnrecer_df.copy().rename(columns={'input_id': 'uniprot_id'})
+
+    # 融合不同模型的结果到同一 DataFrame 中（按 uniprot_id 左连接）
+    baggingdf = res_rxnrecer.merge(
+                    res_msa[['uniprot_id', 'rxn_msa']], on='uniprot_id', how='left'
+                ).merge(
+                    res_catfam[['uniprot_id', 'rxn_catfam']], on='uniprot_id', how='left'
+                ).merge(
+                    res_ecrecer[['uniprot_id', 'rxn_ecrecer']], on='uniprot_id', how='left'
+                ).merge(
+                    res_t5, on='uniprot_id', how='left'
+                )
+
+    # 标准化缺失预测：将 NO-PREDICTION、None 和 NaN 统一处理为 '-'
+    baggingdf.replace(['NO-PREDICTION', 'None'], '-', inplace=True)
+    baggingdf.fillna('-', inplace=True)
+
+    # 调用集成方法进行融合，返回每个蛋白对应的反应预测字典（含概率）
+    baggingdf['ensemble'] = baggingdf.apply(lambda x: integrateEnsemble(
+        esm=x.esm,
+        t5=x.t5,
+        rxn_recer=x.RXNRECer_with_prob,
+        rxn_msa=x.rxn_msa,
+        rxn_catfam=x.rxn_catfam,
+        rxn_ecrecer=x.rxn_ecrecer
+    ), axis=1)
+
+    # 提取融合结果为两列：
+    # - RXNRECer：拼接 reaction ids（字符串）
+    # - RXNRECer_with_prob：原始融合字典
+    baggingdf['RXNRECer_with_prob'] = baggingdf['ensemble']
+    baggingdf['RXNRECer'] = baggingdf['ensemble'].apply(lambda x: cfg.SPLITER.join(x.keys()))
+
+    # 恢复 input_id 命名以便与外部保持一致
+    baggingdf.rename(columns={'uniprot_id': 'input_id'}, inplace=True)
+
+    # 仅保留需要输出的字段
+    res_df = baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']]
+
+    # 对酶/非酶混合情况进行清洗（去除无效或冲突的 '-' 标签）
+    res_df[['RXNRECer', 'RXNRECer_with_prob']] = res_df.apply(
+        lambda row: pd.Series(res_refinement(dict(row['RXNRECer_with_prob']))),
+        axis=1
+    )
+
+    return res_df
     
 
 def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):

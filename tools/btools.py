@@ -2,7 +2,7 @@
 Author: Zhenkun Shi
 Date: 2023-04-20 06:23:40
 LastEditors: Zhenkun Shi kingstdio@gmail.com
-LastEditTime: 2025-03-24 18:53:50
+LastEditTime: 2025-05-20 15:04:27
 FilePath: /preaction/pjlib/btools.py
 Description: 
 
@@ -103,9 +103,11 @@ def make_label(reaction_id, rxn_label_dict):
         return resArray
     
     # 分割反应id并迭代
-    for item in reaction_id.split(';'):
+    for item in reaction_id.split(cfg.SPLITER):
         array_index = rxn_label_dict.get(item)
         if array_index is not None:
+            if not isinstance(array_index, int):
+                print(f"[WARNING] Invalid index type: {type(array_index)} | value: {array_index} | item: {item}")
             resArray[array_index] = 1
 
     return resArray

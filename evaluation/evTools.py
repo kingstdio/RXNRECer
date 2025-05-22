@@ -416,7 +416,7 @@ def show_methods_eva_fig(res_metrics_data):
     if len(unique_groups) > 1:
         # 同时存在 direct 和 ec 方法时，采用自定义的排序顺序
         # direct 方法顺序（按期望顺序排列）
-        direct_order = ["MSA-via-RXN", "Unirep-cosine", "Unirep-euclidean", "ESM-cosine", "ESM-euclidean", "T5-cosine", "T5-euclidean", "RXNRECer"]
+        direct_order = ["MSA-via-RXN", "Unirep-cosine", "Unirep-euclidean", "ESM-cosine", "ESM-euclidean", "T5-cosine", "T5-euclidean", "RXNRECer-S1"]
         # ec 方法顺序
         ec_order = ["PRIAM", "DeepEC", "CLEAN", "CatFam", "MSA-via-EC", "ECRECer"]
         methods_order = []
