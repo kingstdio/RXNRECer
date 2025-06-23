@@ -1,8 +1,8 @@
 '''
 Author: Zhenkun Shi
 Date: 2022-04-08 15:57:16
-LastEditors: Zhenkun Shi
-LastEditTime: 2024-10-06 17:11:07
+LastEditors: Zhenkun Shi kingstdio@gmail.com
+LastEditTime: 2025-05-28 09:55:41
 FilePath: /preaction/config/conf.py
 Description: 
 
@@ -42,6 +42,10 @@ FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DATA_ROOT}model/production_185846best.pth'
 
 # 示例文件路径
 SAMPLE_DIR = DATA_ROOT + 'samples/'
+
+
+#PDB 结构文件目录
+DIR_PDB_BEST = DATA_ROOT + 'structure/pdb/rcsb2uniprot/'
 
 # WEB 用数据目录
 WEB_DATA_DIR = DATA_ROOT +'web/'

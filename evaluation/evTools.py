@@ -243,13 +243,6 @@ def show_ec_methods_10_eva_fig(res_metrics_data):
     # 定义颜色
     # colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999']
     
-        # 定义颜色
-    colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2', '#BEB8DC', '#E7DAD2', '#999999', 
-            '#A1D3B2',  # 浅绿色，协调#8ECFC9
-            
-            
-            '#F5C98A',  # 浅橙色，协调#FFBE7A
-            '#F9988C']  # 浅红色，协调#FA7F6F
     colors = [
     '#8ECFC9',  # 绿色系
     '#FFBE7A',  # 橙色系

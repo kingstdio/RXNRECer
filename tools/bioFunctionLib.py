@@ -1,8 +1,8 @@
 '''
 Author: Zhenkun Shi
 Date: 2022-04-08 20:04:18
-LastEditors: Zhenkun Shi
-LastEditTime: 2023-05-25 09:15:12
+LastEditors: Zhenkun Shi kingstdio@gmail.com
+LastEditTime: 2025-06-10 13:39:19
 FilePath: /preaction/utils/bioinfo/bioFunctionLib.py
 Description: 序列比对方法
 
@@ -14,6 +14,7 @@ import os,sys,re, string, random
 from datetime import datetime
 import subprocess
 from tqdm import tqdm
+import requests
 from tkinter import _flatten
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../../')
@@ -21,8 +22,11 @@ from config import conf as cfg
 from modules.structure.Tdi import Tdi
 import tempfile
 from Bio import SeqIO
+from pathlib import Path
+from itertools import chain
 from tools import filetool 
-
+import shlex
+from itertools import combinations
 
 #region DataFrame表格转fasta文件
 def table2fasta(table, file_out):
@@ -345,3 +349,284 @@ def get_fold_seek_3di(pdb_path, output_path=None, threads=40, verbosity=0):
 
     return res_3di
 #endregion
+
+
+def seqs2fasta(seq1_id, seq1, seq2_id, seq2, path1, path2):
+    """将两条序列写入 fasta 文件"""
+    with open(path1, 'w') as f1:
+        f1.write(f'>{seq1_id}\n{seq1}\n')
+    with open(path2, 'w') as f2:
+        f2.write(f'>{seq2_id}\n{seq2}\n')
+
+def blast2seq(seq1_id, seq1, seq2_id, seq2):
+    """
+    使用 BLASTP 对两条蛋白序列进行比对。
+    
+    Args:
+        seq1_id (str): 第一个序列的 ID（作为数据库）
+        seq1 (str): 第一个序列的氨基酸序列
+        seq2_id (str): 第二个序列的 ID（作为查询）
+        seq2 (str): 第二个序列的氨基酸序列
+
+    Returns:
+        pd.DataFrame: 比对结果（DataFrame 格式）
+    """
+    with tempfile.NamedTemporaryFile(suffix=".fasta") as fasta1, \
+         tempfile.NamedTemporaryFile(suffix=".fasta") as fasta2, \
+         tempfile.TemporaryDirectory() as tmpdir:
+
+        # 写入 fasta
+        seqs2fasta(seq1_id, seq1, seq2_id, seq2, fasta1.name, fasta2.name)
+
+        # 构建数据库
+        subprocess.run([
+            "makeblastdb", "-in", fasta1.name, "-dbtype", "prot", "-out", f"{tmpdir}/db"
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # 运行 blastp
+        output_file = f"{tmpdir}/blast.out"
+        subprocess.run([
+            "blastp", "-query", fasta2.name, "-db", f"{tmpdir}/db", "-outfmt", "6", "-out", output_file
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # 读取结果
+        columns = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen',
+                   'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
+        df = pd.read_csv(output_file, sep="\t", names=columns)
+
+    return df
+
+
+
+# 转换为DataFrame
+def json_to_dataframe(json_data):
+    # 提取UniProt ID
+    uniprot_id = list(json_data.keys())[0]
+    
+    # 为每个条目添加UniProt ID
+    for entry in json_data[uniprot_id]:
+        entry['uniprot_id'] = uniprot_id
+    
+    # 创建DataFrame
+    df = pd.DataFrame(json_data[uniprot_id])
+    
+    # 重新排列列顺序，将uniprot_id放在前面
+    cols = ['uniprot_id'] + [col for col in df.columns if col != 'uniprot_id']
+    df = df[cols]
+    
+    return df
+
+
+# 假设df是您提供的DataFrame
+def select_best_pdb(df):
+    # 规则1+2：先按分辨率升序，再按实验方法排序（X-ray优先）
+    df_sorted = df.sort_values(
+        by=['resolution', 'experimental_method'],
+        ascending=[True, False]  # resolution越小越好，method按字母倒序X-ray优先
+    )
+    
+    # 规则3：如果分辨率相同，选择链ID字母序靠前的（A链优先）
+    df_sorted = df_sorted.sort_values('chain_id', ascending=True)
+    
+    # 规则4（可选）：如果需要特定物种，可以添加筛选
+    # df_sorted = df_sorted[df_sorted['tax_id'] == 特定物种ID]
+    
+    # 返回第一个（最优）条目
+    best_row = df_sorted.iloc[0]
+    return best_row['pdb_id'], best_row['chain_id']
+
+
+def download_pdb(pdb_id, save_path=None):
+    """下载PDB文件"""
+    url = f"https://files.rcsb.org/download/{pdb_id}.pdb"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        
+        if save_path:
+            with open(save_path, 'w') as f:
+                f.write(response.text)
+            print(f"PDB文件已保存到: {save_path}")
+        return response.text
+    except Exception as e:
+        print(f"下载失败: {str(e)}")
+        return None
+    
+
+def parse_pdb_info(pdb_json):
+    """解析PDB JSON数据并提取关键信息"""
+    # 主要信息提取
+    main_info = {
+        "pdb_id": pdb_json.get("entry", {}).get("id", ""),
+        "resolution": pdb_json.get("rcsb_entry_info", {}).get("resolution_combined", [None])[0],
+        "method": pdb_json.get("exptl", [{}])[0].get("method", "").title(),
+        "journal": f"{pdb_json.get('citation', [{}])[0].get('journal_abbrev', '')} "
+                  f"({pdb_json.get('citation', [{}])[0].get('year', '')})",
+        "ref_doi": pdb_json.get("citation", [{}])[0].get("pdbx_database_id_doi", "")
+    }
+
+    # 配体信息提取
+    ligands = []
+    if "rcsb_binding_affinity" in pdb_json:
+        ligands = [{
+            "chemical_id": lig["chemical_id"],
+            "chemical_name": lig.get("chemical_name", ""),
+            "formula": lig.get("formula", "")
+        } for lig in pdb_json["rcsb_binding_affinity"]]
+
+    return main_info, ligands
+
+def get_best_pdb(uniprot_id: str, save_path=''):
+    """
+    修正版：通过 UniProt ID 获取最优 PDB 结构
+    返回: {
+        "pdb_id": str,
+        "resolution": float,
+        "method": str,
+        "ligands": list
+    }
+    """
+    # 步骤1：通过 PDBe API 获取映射数据
+    url = f"https://www.ebi.ac.uk/pdbe/api/mappings/best_structures/{uniprot_id}"
+    response = requests.get(url).json()
+
+    if not response:
+        raise ValueError(f"No PDB found for UniProt ID: {uniprot_id}")
+    
+    response = json_to_dataframe(response)
+    
+    # 执行筛选
+    best_pdb, best_chain = select_best_pdb(response)
+    print(f"Best PDB ID: {best_pdb}")
+    
+
+    # 步骤4：获取每个 PDB 的元数据
+
+    try:
+        pdb_api = f"https://data.rcsb.org/rest/v1/core/entry/{best_pdb}"
+        pdb_info = requests.get(pdb_api).json()
+        main_info, ligands = parse_pdb_info(pdb_info)
+        print(main_info, ligands)
+        
+    except Exception as e:
+        print(f"Error processing PDB RCSB_{uniprot_id}_{best_pdb}: {str(e)}")
+       
+    download_pdb(best_pdb, f"{save_path}/RCSB_{uniprot_id}_{best_pdb}.pdb")
+
+
+    
+    # return best_pdb
+    
+    
+
+def run_tmalign(pdb1, pdb2):
+    """运行 TM-align 并提取结构比对结果（包括 TM-score 和 RMSD）"""
+    result = subprocess.run(["TMalign", str(pdb1), str(pdb2)],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL,
+                            text=True)
+
+    tm1, tm2, rmsd = None, None, None
+
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("TM-score=") and "Chain_1" in line:
+            tm1 = float(line.split('=')[1].split()[0])
+        elif line.startswith("TM-score=") and "Chain_2" in line:
+            tm2 = float(line.split('=')[1].split()[0])
+        elif "RMSD=" in line and "Seq_ID" in line:
+            try:
+                rmsd = float(line.split("RMSD=")[1].split(",")[0])
+            except:
+                pass
+
+    if tm1 is not None and tm2 is not None:
+        return {
+            'tm_score_chain1': round(tm1, 6),
+            'tm_score_chain2': round(tm2, 6),
+            'tm_score_avg': round((tm1 + tm2) / 2, 6),
+            'tm_score_max': round(max(tm1, tm2), 6),
+            'rmsd_tmalign': round(rmsd, 3) if rmsd is not None else None
+        }
+
+    return None
+
+
+def run_rmsd(pdb1: str, pdb2: str):
+    """使用 PyMOL align 计算两个结构的 CA RMSD"""
+    pdb1_safe = shlex.quote(pdb1)
+    pdb2_safe = shlex.quote(pdb2)
+
+    cmd = f"""
+    pymol -c -q -d '
+    load {pdb1_safe}, obj1;
+    load {pdb2_safe}, obj2;
+    align obj1 and name CA, obj2 and name CA;
+    quit'
+    """
+
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            executable="/bin/bash",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode != 0:
+            return None
+
+        for line in result.stdout.splitlines():
+            if "RMSD =" in line:
+                try:
+                    rmsd = float(line.split("=")[1].strip().split()[0])
+                    return round(rmsd, 6)
+                except ValueError:
+                    pass
+
+    except Exception:
+        return None
+
+    return None
+    
+def align_all_structures(pdb_dir, output_tsv="tmalign_results.tsv"):
+    """遍历并比对该目录下所有结构，输出 TM-score 表格"""
+    pdb_dir = Path(pdb_dir)
+    pdb_files = sorted([
+        str(p.resolve()) 
+        for p in chain(pdb_dir.glob("*.pdb"), pdb_dir.glob("*.cif"))
+    ])
+    pdb_pairs = pd.DataFrame(combinations(pdb_files, 2), columns=['pdb1', 'pdb2'])
+
+    # 运行 TM-align
+    tmalign_results = pdb_pairs.parallel_apply(
+        lambda row: run_tmalign(row['pdb1'], row['pdb2']), axis=1
+    )
+
+    # 拆解成多列
+    tmalign_df = pd.json_normalize(tmalign_results)
+    pdb_pairs = pd.concat([pdb_pairs, tmalign_df], axis=1)
+
+    # 运行 PyMOL RMSD
+    pdb_pairs['rmsd_pymol'] = pdb_pairs.parallel_apply(
+        lambda row: run_rmsd(row['pdb1'], row['pdb2']), axis=1
+    )
+
+    # 结构名称标准化
+    pdb_pairs['pdb1'] = pdb_pairs['pdb1'].apply(lambda x: Path(x).stem.replace('-F1-model_v4', ''))
+    pdb_pairs['pdb2'] = pdb_pairs['pdb2'].apply(lambda x: Path(x).stem.replace('-F1-model_v4', ''))
+
+    # 清洗无效行
+    valid_cols = ['tm_score_avg', 'rmsd_pymol']
+    pdb_pairs = pdb_pairs.dropna(subset=valid_cols)
+
+    # 排序并保存
+    pdb_pairs = pdb_pairs.sort_values(valid_cols, ascending=[False, True]).reset_index(drop=True)
+    ordered_cols = ['pdb1', 'pdb2'] + [c for c in pdb_pairs.columns if c not in ('pdb1', 'pdb2')]
+    pdb_pairs = pdb_pairs[ordered_cols]
+    pdb_pairs.to_csv(output_tsv, sep='\t', index=False)
+
+    return pdb_pairs
