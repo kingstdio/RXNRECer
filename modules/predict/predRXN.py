@@ -157,10 +157,8 @@ def getT5(df_test, topk=3):
                                     topk=topk).rename(columns={'simi':'esm'})
         
     # T5 Embedding    
-    embd_t5 = ebdt5.get_embd_seq(seqdfwithid=df_test.rename(columns={'uniprot_id':'id'}), batch_szise=20)
+    embd_t5 = ebdt5.get_embd_seq(seqdfwithid=df_test.rename(columns={'uniprot_id':'id'}), batch_size=20)
         
-    # T5 Embedding    
-    embd_t5 = ebdt5.get_embd_seq(seqdfwithid=df_test.rename(columns={'uniprot_id':'id'}), batch_szise=20)
     # T5 similarity
     t5_cos =  get_top_protein_simi(x_feature=np.vstack(featureBank.t5), 
                                 y_feature=np.vstack(embd_t5.t5), 

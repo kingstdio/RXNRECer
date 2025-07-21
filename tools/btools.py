@@ -2,8 +2,8 @@
 Author: Zhenkun Shi
 Date: 2023-04-20 06:23:40
 LastEditors: Zhenkun Shi kingstdio@gmail.com
-LastEditTime: 2025-05-28 15:13:22
-FilePath: /preaction/pjlib/btools.py
+LastEditTime: 2025-06-25 16:59:57
+FilePath: /RXNRECer/tools/btools.py
 Description: 
 
 Copyright (c) 2023 by tibd, All Rights Reserved. 
@@ -237,7 +237,9 @@ def transRXN2EC(rxns, dict_rxn2ec):
         else:
             ec_list.append('-')
             print(f'{rxn} not in dict_rxn2ec')
-    return ';'.join(ec_list)
+    res = ')('.join(ec_list)
+    res =f'({res})'
+    return res
 
 
 # 转换为DataFrame
@@ -360,6 +362,47 @@ def get_best_pdb(uniprot_id: str):
     return pdb_path
     
     
+def get_rxn_detail_by_ids(rxn_id):
+    if rxn_id == '-':
+        return {
+            'reaction id': '-',
+            'reaction equation': '-'
+        }
+    
+    rxn_bank =  pd.read_feather(cfg.FILE_RHEA_REACTION)
+    rxn_record = rxn_bank[rxn_bank.reaction_id == rxn_id]
+    
+    if rxn_record.empty:
+        return {}  # Avoid errors if the record is missing
+
+    rxn_record = rxn_record.iloc[0]  # Take the first match
+
+    return {
+        'reaction id': rxn_record.reaction_id,
+        'reaction equation': rxn_record.equation,
+        'reaction equation in ChEBI format': rxn_record.equation_chebi,
+        'reaction equation in SMILES format': rxn_record.equation_smiles,
+        'reaction associated Enzyme Commission Number': rxn_record.ec_number
+    }
+    
+    
+def get_rxn_equ_by_ids(rxn_ids, rxn_bank=None):
+    if not isinstance(rxn_ids, str) or rxn_ids.strip() == '-':
+        return '-'
+
+    rxn_ids = rxn_ids.strip()
+    
+    if rxn_bank is None:
+        rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
+
+    rxn_list = [rxn_ids] if cfg.SPLITER not in rxn_ids else rxn_ids.split(cfg.SPLITER)
+    rxn_record = rxn_bank[rxn_bank.reaction_id.isin(rxn_list)]
+
+    if rxn_record.empty:
+        return '-'
+
+    return cfg.SPLITER.join(rxn_record.equation.tolist())
+
 
 
 if __name__ =='__main__':

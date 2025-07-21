@@ -3,220 +3,115 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 import pandas as pd
-from transformers import T5EncoderModel, T5Tokenizer
+import warnings
+
+# Suppress noisy warnings and logging
+warnings.filterwarnings("ignore", category=FutureWarning)
+from transformers import T5EncoderModel, T5Tokenizer, T5Config
+from transformers.utils import logging
+logging.set_verbosity_error()
 
 
 def get_device():
-    """Returns the appropriate device (cuda, mps, or cpu)."""
+    """Return the best available device."""
     if torch.cuda.is_available():
         return torch.device('cuda')
     elif torch.backends.mps.is_available():
         return torch.device('mps')
-    else:
-        return torch.device('cpu')
+    return torch.device('cpu')
 
 
-# Original function to read sequences from FASTA remains the same
-def read_fasta(fasta_path, split_char, id_field, is_3Di):
-    """
-    Reads a FASTA file containing multiple sequences.
-    Returns a dictionary of sequences.
-    """
+
+def read_fasta(fasta_path, split_char='!', id_field=0, is_3Di=False):
+    """Read FASTA file and return a dict of {id: sequence}."""
     sequences = {}
-    with open(fasta_path, 'r') as fasta_f:
-        for line in fasta_f:
+    with open(fasta_path, 'r') as f:
+        for line in f:
             if line.startswith('>'):
-                uniprot_id = line.replace('>', '').strip().split(split_char)[id_field]
-                uniprot_id = uniprot_id.replace("/", "_").replace(".", "_")
+                uniprot_id = line[1:].strip().split(split_char)[id_field].replace("/", "_").replace(".", "_")
                 sequences[uniprot_id] = ''
             else:
-                if is_3Di:
-                    sequences[uniprot_id] += ''.join(line.split()).replace("-", "").lower()
-                else:
-                    sequences[uniprot_id] += ''.join(line.split()).replace("-", "")
+                seq_line = ''.join(line.split()).replace("-", "")
+                sequences[uniprot_id] += seq_line.lower() if is_3Di else seq_line
     return sequences
 
 
-def load_model_and_prepare(model_dir="Rostlab/ProstT5"):
-    """
-    Load the T5 model and tokenizer, optionally set to half-precision.
-
-    Parameters:
-        model_dir (str): Path to the model directory.
-        half_precision (bool): Whether to use half-precision (float16).
-        device (torch.device): The device to load the model onto (e.g., 'cpu' or 'cuda').
-
-    Returns:
-        model: The T5 model.
-        vocab: The tokenizer.
-    """
-    
-    # print("Loading T5 model and tokenizer from: {}".format(model_dir))
-    
+def load_model_and_prepare(model_dir):
+    """Load and configure T5 model + tokenizer."""
     device = get_device()
-    if str(device) =='cuda':
-        half_precision = True
-    else:
-        half_precision = False
-    
-    # Load the model
-    model = T5EncoderModel.from_pretrained(model_dir).to(device)
-    model = model.eval()  # Set to evaluation mode
+    config = T5Config.from_pretrained(model_dir)
+    config.is_encoder_decoder = False
+    config.architectures = ['T5EncoderModel']
+    config.use_cache = False
 
-    # Use half-precision if specified
-    if half_precision:
+    model = T5EncoderModel.from_pretrained(model_dir, config=config).to(device).eval()
+    if device.type == 'cuda':
         model = model.half()
-        # print("Using model in half-precision!")
 
-    # Load the tokenizer
-    vocab = T5Tokenizer.from_pretrained(model_dir, do_lower_case=False)
-
-    return model, vocab
+    tokenizer = T5Tokenizer.from_pretrained(model_dir, do_lower_case=False, legacy=True)
+    return model, tokenizer
 
 
-def process_batches(sequences, model, vocab, prefix, per_protein, max_residues, max_seq_len, max_batch, device):
-    """
-    Process sequences in batches and generate embeddings.
-
-    Parameters:
-        sequences (list): List of tuples (id, sequence).
-        model: The T5 model.
-        vocab: The tokenizer.
-        prefix (str): Prefix to prepend to sequences.
-        per_protein (bool): Whether to average embeddings per protein.
-        max_residues (int): Maximum residues in a batch.
-        max_seq_len (int): Maximum length of a sequence.
-        max_batch (int): Maximum number of sequences per batch.
-        device (torch.device): The device to run inference on.
-
-    Returns:
-        dict: A dictionary mapping protein IDs to embeddings.
-    """
+def process_batches(sequences, model, tokenizer, prefix, per_protein, max_residues, max_seq_len, max_batch, device):
     emb_dict = {}
     batch = []
     start = time.time()
-
-    # Wrap the sequence processing loop with tqdm to show progress
     for seq_idx, (identifier, seq) in tqdm(enumerate(sequences, 1), total=len(sequences), desc="Processing Sequences"):
-        # Replace non-standard amino acids with 'X'
         seq = seq.replace('U', 'X').replace('Z', 'X').replace('O', 'X')
         seq_len = len(seq)
         seq = f"{prefix} {' '.join(seq)}"
         batch.append((identifier, seq, seq_len))
-
-        # Calculate total residues in the current batch
-        n_res_batch = sum(s_len for _, _, s_len in batch) + seq_len
-
-        # Process the batch if limits are reached
+        n_res_batch = sum(s_len for _, _, s_len in batch)
         if len(batch) >= max_batch or n_res_batch >= max_residues or seq_idx == len(sequences) or seq_len > max_seq_len:
             pdb_ids, seqs, seq_lens = zip(*batch)
             batch = []
-
-            # Tokenize sequences
-            token_encoding = vocab.batch_encode_plus(
-                seqs, add_special_tokens=True, padding="longest", return_tensors='pt'
-            ).to(device)
-
-            # Generate embeddings
+            tokenized = tokenizer.batch_encode_plus(seqs, add_special_tokens=True, padding="longest", return_tensors='pt').to(device)
             try:
                 with torch.no_grad():
-                    embedding_repr = model(
-                        token_encoding.input_ids,
-                        attention_mask=token_encoding.attention_mask
-                    )
+                    outputs = model(tokenized.input_ids, attention_mask=tokenized.attention_mask)
             except RuntimeError:
-                print(f"RuntimeError during embedding for {identifier} (Length={seq_len})")
+                print(f"RuntimeError on {identifier} (Length={seq_len})")
                 continue
 
-            # Extract embeddings
-            for batch_idx, identifier in enumerate(pdb_ids):
-                s_len = seq_lens[batch_idx]
-                emb = embedding_repr.last_hidden_state[batch_idx, 1:s_len + 1]
-
-                # Optionally average embeddings
+            for i, pid in enumerate(pdb_ids):
+                emb = outputs.last_hidden_state[i, 1:seq_lens[i]+1]
                 if per_protein:
                     emb = emb.mean(dim=0)
+                emb_dict[pid] = emb.detach().cpu().numpy().squeeze()
 
-                # Save embedding
-                emb_dict[identifier] = emb.detach().cpu().numpy().squeeze()
-
-                # Log example embedding
-                # if len(emb_dict) == 1:
-                #     print(f"Example: Embedded protein {identifier} (Length={s_len}) to embedding of shape {emb.shape}")
-
-    end = time.time()
-    # print('########################################')
-    # print(f"Total time: {end - start:.2f} seconds")
-    # print(f"Time per protein: {(end - start) / len(emb_dict):.4f} seconds")
-    # print('########################################')
-
+    print(f"Processed {len(emb_dict)} proteins in {time.time() - start:.2f} seconds")
     return emb_dict
 
-
-def get_embeddings(seq_path, id_field, per_protein, is_3Di=False, split_char='!', max_residues=4000, max_seq_len=2701, max_batch=40, device='cuda'):
-    """
-    Generate embeddings from a FASTA file.
-
-    Parameters:
-        seq_path (str): Path to the FASTA file.
-        model_dir (str): Path to the model directory.
-        split_char (str): Character used to split sequences in FASTA headers.
-        id_field (int): Field in the header to use as the identifier.
-        per_protein (bool): Whether to average embeddings per protein.
-        half_precision (bool): Whether to use half-precision.
-        is_3Di (bool): Whether the input is 3Di sequences.
-        max_residues (int): Maximum residues in a batch.
-        max_seq_len (int): Maximum sequence length.
-        max_batch (int): Maximum sequences per batch.
-        device (str): Device to use for computation ('cuda' or 'cpu').
-
-    Returns:
-        dict: A dictionary mapping protein IDs to embeddings.
-    """
-    # Read sequences from FASTA
+def get_embeddings(seq_path, id_field=0, per_protein=True, is_3Di=False, split_char='!',
+                   max_residues=4000, max_seq_len=2701, max_batch=40, device='cuda'):
     seq_dict = read_fasta(seq_path, split_char, id_field, is_3Di)
     sequences = sorted(seq_dict.items(), key=lambda kv: len(kv[1]), reverse=True)
     prefix = "<fold2AA>" if is_3Di else "<AA2fold>"
-
-    # Load model and vocab
-    model, vocab = load_model_and_prepare(model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
-
-    # Process batches
-    return process_batches(sequences, model, vocab, prefix, per_protein, max_residues, max_seq_len, max_batch, torch.device(device))
-
+    model, tokenizer = load_model_and_prepare(model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
+    return process_batches(sequences, model, tokenizer, prefix, per_protein, max_residues, max_seq_len, max_batch, torch.device(device))
 
 def save(emb_dict, emb_path):
-    res = pd.DataFrame(emb_dict).T
-    res.columns=[f'f{item}' for item in range(1, 1025)]
-    res.insert(0, 'uniprot_id', res.index)
-    res.reset_index(drop=True, inplace=True)
-    res.to_feather(emb_path)
-    print(f'File saved to:{emb_path} successfully')
+    df = pd.DataFrame(emb_dict).T
+    df.columns = [f'f{i+1}' for i in range(df.shape[1])]
+    df.insert(0, 'uniprot_id', df.index)
+    df.reset_index(drop=True, inplace=True)
+    df.to_feather(emb_path)
+    print(f"Embeddings saved to: {emb_path}")
 
-
-def get_embd_seq(seqdfwithid, batch_szise=40, max_seq_len=2500):
+def get_embd_seq(seqdfwithid, batch_size=40, max_seq_len=2500):
     seq_dict = dict(zip(seqdfwithid['id'], seqdfwithid['seq'].str.upper().str[:max_seq_len]))
     sequences = sorted(seq_dict.items(), key=lambda kv: len(kv[1]), reverse=True)
-    prefix = '<AA2fold>'
-    model, vocab = load_model_and_prepare(model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
-    rpr = process_batches(sequences, model, vocab, prefix, per_protein=True, max_residues=4000, max_seq_len=2700, max_batch=batch_szise, device =get_device())
-    rpr = pd.DataFrame(list(rpr.items()), columns=['id', 't5']) 
-    return rpr
-    
+    prefix = "<AA2fold>"
+    model, tokenizer = load_model_and_prepare(model_dir='/hpcfs/fhome/shizhenkun/.cache/huggingface/hub/models--Rostlab--ProstT5/snapshots/d7d097d5bf9a993ab8f68488b4681d6ca70db9e5')
+    result = process_batches(sequences, model, tokenizer, prefix, per_protein=True, max_residues=4000, max_seq_len=2700, max_batch=batch_size, device=get_device())
+    return pd.DataFrame(result.items(), columns=['id', 't5'])
 
 def main():
-    # Define variables directly instead of using argparse
-    seq_path = Path('/hpcfs/fhome/shizhenkun/sample100.fasta')  # path to input FASTAS
-    emb_path = Path('/tmp/3di_embeddings.feather')  # path where embeddings should be stored
-    
-    id_field = 0  # field index for the uniprot identifier
-    per_protein = True  # Whether to average embeddings per protein
-    is_3Di = False  # Whether the input is 3Di sequences
-
-    # Generate embeddings
-    rpr = get_embeddings(seq_path=seq_path, id_field=id_field, per_protein=per_protein, is_3Di=is_3Di)
-    save(emb_dict=rpr, emb_path=emb_path)
-
+    seq_path = Path('/hpcfs/fhome/shizhenkun/sample_100.fasta')
+    emb_path = Path('/tmp/3di_embeddings_sample100.feather')
+    result = get_embeddings(seq_path=seq_path, id_field=0, per_protein=True, is_3Di=False)
+    save(emb_dict=result, emb_path=emb_path)
 
 if __name__ == '__main__':
     main()
+

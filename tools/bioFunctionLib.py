@@ -2,8 +2,8 @@
 Author: Zhenkun Shi
 Date: 2022-04-08 20:04:18
 LastEditors: Zhenkun Shi kingstdio@gmail.com
-LastEditTime: 2025-06-10 13:39:19
-FilePath: /preaction/utils/bioinfo/bioFunctionLib.py
+LastEditTime: 2025-06-30 13:34:10
+FilePath: /RXNRECer/tools/bioFunctionLib.py
 Description: 序列比对方法
 
 Copyright (c) 2022 by tibd, All Rights Reserved. 
@@ -15,6 +15,7 @@ from datetime import datetime
 import subprocess
 from tqdm import tqdm
 import requests
+from requests.exceptions import RequestException
 from tkinter import _flatten
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../../')
@@ -478,45 +479,79 @@ def parse_pdb_info(pdb_json):
 
 def get_best_pdb(uniprot_id: str, save_path=''):
     """
-    修正版：通过 UniProt ID 获取最优 PDB 结构
+    获取 UniProt ID 对应的最佳 PDB 结构。
+    优先使用 PDBe 最佳结构，若找不到则回退使用 AlphaFold v4 模型。
     返回: {
         "pdb_id": str,
-        "resolution": float,
+        "source": "rcsb" | "alphafold",
+        "resolution": float | None,
         "method": str,
         "ligands": list
-    }
+    } 或 None（全部失败）
     """
-    # 步骤1：通过 PDBe API 获取映射数据
-    url = f"https://www.ebi.ac.uk/pdbe/api/mappings/best_structures/{uniprot_id}"
-    response = requests.get(url).json()
-
-    if not response:
-        raise ValueError(f"No PDB found for UniProt ID: {uniprot_id}")
-    
-    response = json_to_dataframe(response)
-    
-    # 执行筛选
-    best_pdb, best_chain = select_best_pdb(response)
-    print(f"Best PDB ID: {best_pdb}")
-    
-
-    # 步骤4：获取每个 PDB 的元数据
-
     try:
-        pdb_api = f"https://data.rcsb.org/rest/v1/core/entry/{best_pdb}"
-        pdb_info = requests.get(pdb_api).json()
-        main_info, ligands = parse_pdb_info(pdb_info)
-        print(main_info, ligands)
-        
+        # Step 1: 查询 PDBe API
+        url = f"https://www.ebi.ac.uk/pdbe/api/mappings/best_structures/{uniprot_id}"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except (RequestException, ValueError) as e:
+        print(f"[ERROR] Request failed for {uniprot_id}: {e}")
+        data = {}
+
+    if data and uniprot_id in data:
+        try:
+            df = json_to_dataframe(data)
+            best_pdb, best_chain = select_best_pdb(df)
+            print(f"[INFO] Best PDB ID for {uniprot_id}: {best_pdb}")
+            
+            # 获取 PDB 元数据
+            try:
+                pdb_api = f"https://data.rcsb.org/rest/v1/core/entry/{best_pdb}"
+                pdb_info = requests.get(pdb_api, timeout=10).json()
+                main_info, ligands = parse_pdb_info(pdb_info)
+            except Exception as e:
+                print(f"[WARNING] Failed to parse metadata for {best_pdb}: {e}")
+                main_info, ligands = {}, []
+
+            # 下载结构
+            file_path = os.path.join(save_path, f"RCSB_{uniprot_id}_{best_pdb}.pdb")
+            download_pdb(best_pdb, file_path)
+
+            return {
+                "pdb_id": best_pdb,
+                "source": "rcsb",
+                "resolution": main_info.get("resolution"),
+                "method": main_info.get("method", "X-ray/EM"),
+                "ligands": ligands
+            }
+
+        except Exception as e:
+            print(f"[ERROR] Failed to process RCSB PDB for {uniprot_id}: {e}")
+
+    # Step 2: 回退使用 AlphaFold v4 模型
+    try:
+        af_url = f"https://alphafold.ebi.ac.uk/files/AF-{uniprot_id}-F1-model_v4.pdb"
+        file_path = os.path.join(save_path, f"AF_{uniprot_id}_F1_model_v4.pdb")
+        response = requests.get(af_url, timeout=10)
+        if response.status_code == 200:
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            print(f"[INFO] Fallback AlphaFold model downloaded for {uniprot_id}")
+
+            return {
+                "pdb_id": f"AF-{uniprot_id}-F1-model_v4",
+                "source": "alphafold",
+                "resolution": None,
+                "method": "AlphaFold v4",
+                "ligands": []
+            }
+        else:
+            print(f"[WARNING] AlphaFold model not available for {uniprot_id}")
     except Exception as e:
-        print(f"Error processing PDB RCSB_{uniprot_id}_{best_pdb}: {str(e)}")
-       
-    download_pdb(best_pdb, f"{save_path}/RCSB_{uniprot_id}_{best_pdb}.pdb")
+        print(f"[ERROR] Failed to download AlphaFold model for {uniprot_id}: {e}")
 
-
-    
-    # return best_pdb
-    
+    return None
     
 
 def run_tmalign(pdb1, pdb2):

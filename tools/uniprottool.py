@@ -1,9 +1,9 @@
 '''
 Author: Zhenkun Shi
 Date: 2023-06-21 14:55:14
-LastEditors: Zhenkun Shi
-LastEditTime: 2023-11-13 06:31:32
-FilePath: /preaction/tools/uniprottool.py
+LastEditors: Zhenkun Shi kingstdio@gmail.com
+LastEditTime: 2025-06-25 16:23:43
+FilePath: /RXNRECer/tools/uniprottool.py
 Description: 
 
 Copyright (c) 2023 by tibd, All Rights Reserved. 
@@ -191,7 +191,7 @@ def get_uniprot_records_by_ids(ids, batch_size=40):
   # Define UniProt API endpoint
     base_url = "https://rest.uniprot.org/uniprotkb/search"
     all_results = []
-    for i in range(0, len(ids), batch_size):
+    for i in tqdm(range(0, len(ids), batch_size)):
         batch_ids = ids[i:i+batch_size]
         ids_query = " OR accession:".join(batch_ids)
         query = f"accession:{ids_query}"

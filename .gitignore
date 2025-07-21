@@ -42,3 +42,4 @@ case/fusarium_venenatum/middle/*
 *.ai
 *._.DS_Store
 *._*
+case/case_promiscuous/*

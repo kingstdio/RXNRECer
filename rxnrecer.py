@@ -180,11 +180,7 @@ def step_by_step_prediction(input_data,
         
         # If the batch is non-empty, run prediction
         if not batch_data.empty:
-            res_batch = single_batch_run_prediction(batch_data,
-                                                model=model,
-                                                mcfg=mcfg,
-                                                getEquation=getEquation,
-                                                 Ensemble=Ensemble)
+            res_batch = single_batch_run_prediction(batch_data, model=model, mcfg=mcfg, getEquation=getEquation, Ensemble=Ensemble)
             res = res + [res_batch]  # Use extend for better performance
     fres = pd.concat(res, axis=0, ignore_index=True)
     
@@ -335,13 +331,14 @@ def get_ensemble(input_df, rxnrecer_df):
     baggingdf.rename(columns={'uniprot_id': 'input_id'}, inplace=True)
 
     # 仅保留需要输出的字段
-    res_df = baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']]
+    res_df = baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']].copy()
 
-    # 对酶/非酶混合情况进行清洗（去除无效或冲突的 '-' 标签）
+    #对酶/非酶混合情况进行清洗（去除无效或冲突的 '-' 标签）
     res_df[['RXNRECer', 'RXNRECer_with_prob']] = res_df.apply(
         lambda row: pd.Series(res_refinement(dict(row['RXNRECer_with_prob']))),
         axis=1
     )
+
 
     return res_df
     
