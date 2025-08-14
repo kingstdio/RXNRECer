@@ -12,6 +12,7 @@ from typing import List, Dict, Tuple, Optional, Union
 from pathlib import Path
 from Bio import SeqIO
 from Bio.Blast import NCBIXML
+from .file_utils import dataframe_to_fasta  # centralize I/O helpers
 import requests
 from requests.exceptions import RequestException
 
@@ -84,13 +85,7 @@ def get_blast_results(train_df: pd.DataFrame, test_df: pd.DataFrame,
     return results
 
 
-def dataframe_to_fasta(df: pd.DataFrame, output_file: str, 
-                      id_col: str = "uniprot_id", seq_col: str = "seq") -> None:
-    """Convert DataFrame to FASTA file."""
-    with open(output_file, 'w') as f:
-        for _, row in df.iterrows():
-            f.write(f">{row[id_col]}\n")
-            f.write(f"{row[seq_col]}\n")
+# Removed duplicated dataframe_to_fasta to avoid divergence; use file_utils.dataframe_to_fasta
 
 
 def calculate_sequence_similarity(seq1: str, seq2: str, method: str = 'identity') -> float:

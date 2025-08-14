@@ -4,9 +4,12 @@ File utility functions for RXNRECer
 
 import os
 import json
+import shutil
+import subprocess
+import time
 import pandas as pd
 from pathlib import Path
-from typing import Union, Dict, List, Any
+from typing import  Dict,  Any
 from Bio import SeqIO
 
 
@@ -183,3 +186,86 @@ def get_dataframe_hash(df: pd.DataFrame) -> str:
     
     df_str = df.to_string(index=False, header=True)
     return hashlib.md5(df_str.encode('utf-8')).hexdigest()
+
+#region: download file
+def downlod(
+    download_url: str,
+    save_file: str,
+    verbos: bool = False,
+    connections: int = 16,
+    timeout: int = 300,
+    allow_overwrite: bool = False,
+) -> None:
+    """
+    Download a file using aria2c if available.
+
+    - Uses multiple connections for speed by default.
+    - If aria2c is missing, prints guidance and raises an error.
+
+    Args:
+        download_url: Source URL
+        save_file: Destination file path
+        verbos: Print verbose aria2c output if True
+        connections: Parallel connections for aria2c (-x/-s)
+        timeout: Per-connection timeout (seconds)
+        allow_overwrite: Overwrite existing file if True
+    """
+    dest_dir = os.path.dirname(save_file) or "."
+    ensure_dir(dest_dir)
+
+    aria2c_path = shutil.which('aria2c')
+    if not aria2c_path:
+        msg = (
+            "aria2c not found. Please install aria2 (e.g., `sudo apt install aria2` or "
+            "`conda install -c conda-forge aria2`)."
+        )
+        print(msg)
+        raise RuntimeError(msg)
+
+    # If not allowed to overwrite and file already exists, skip
+    if not allow_overwrite and os.path.exists(save_file):
+        if verbos:
+            print(f"Skip existing file: {save_file}")
+        return
+
+    file_name = os.path.basename(save_file)
+    cmd = [
+        aria2c_path,
+        f"--allow-overwrite={'true' if allow_overwrite else 'false'}",
+        '--auto-file-renaming=false',
+        '-x', str(connections),
+        '-s', str(connections),
+        '-k', '1M',
+        '--timeout', str(timeout),
+        '-m', '3',
+        '-d', dest_dir,
+        '-o', file_name,
+        download_url,
+    ]
+    if not verbos:
+        cmd.extend(['--console-log-level=warn', '--summary-interval=0'])
+
+    if verbos:
+        print(' '.join(cmd))
+
+    subprocess.run(cmd, check=True)
+
+
+#endregion
+
+
+#region DataFrame表格转fasta文件
+def table2fasta(table, file_out):
+    """DataFrame表格转fasta文件, 输入两列，【序列名称，序列】
+
+    Args:
+        table (DataFrame): 包含序列名称、序列的DataFame
+        file_out (_type_): 输出fasta文件路径
+    """
+    file = open(file_out, 'w')
+    for index, row in table.iterrows():
+        file.write(f'>{row.iloc[0]}\n')
+        file.write(f'{ row.iloc[1]}\n')
+    file.close()
+    # print('Write finished')
+#endregion

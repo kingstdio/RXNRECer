@@ -29,21 +29,7 @@ from tools import filetool
 import shlex
 from itertools import combinations
 
-#region DataFrame表格转fasta文件
-def table2fasta(table, file_out):
-    """DataFrame表格转fasta文件, 输入两列，【序列名称，序列】
 
-    Args:
-        table (DataFrame): 包含序列名称、序列的DataFame
-        file_out (_type_): 输出fasta文件路径
-    """
-    file = open(file_out, 'w')
-    for index, row in table.iterrows():
-        file.write(f'>{row.iloc[0]}\n')
-        file.write(f'{ row.iloc[1]}\n')
-    file.close()
-    # print('Write finished')
-#endregion
 
 
 # 读取 FASTA 文件并转换为 DataFrame

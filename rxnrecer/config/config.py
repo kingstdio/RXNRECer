@@ -14,7 +14,7 @@ import os
 CODE_MODE = 'DEBUG'
 
 #工程路径
-DIR_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DIR_PROJECT_ROOT = '/hpcfs/fhome/shizhenkun/codebase/rxnrecer_production'
 
 #数据目录
 DATA_ROOT =  DIR_PROJECT_ROOT + '/data/'
@@ -50,13 +50,14 @@ DIR_PDB_BEST = DATA_ROOT + 'structure/pdb/rcsb2uniprot/'
 # WEB 用数据目录
 WEB_DATA_DIR = DATA_ROOT +'web/'
 UNIPROT_DATA_DIR = DATA_ROOT +'uniprot/'
+RHEA_DATA_DIR = DATA_ROOT +'rhea/'
 
 SPLITER=';'
 
 #Uniprot
-URL_SPROT_SNAP201801 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2018_01/knowledgebase/uniprot_sprot-only2018_01.tar.gz'
-URL_SPROT_SNAP202301 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2023_01/knowledgebase/uniprot_sprot-only2023_01.tar.gz'
-URL_SPROT_SNAP202401 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2024_01/knowledgebase/uniprot_sprot-only2024_01.tar.gz'
+URL_SPROT_SNAP201801 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2018_01/knowledgebase/uniprot_sprot-only2018_01.tar.gz'
+URL_SPROT_SNAP202301 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2023_01/knowledgebase/uniprot_sprot-only2023_01.tar.gz'
+URL_SPROT_SNAP202401 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2024_01/knowledgebase/uniprot_sprot-only2024_01.tar.gz'
 
 FILE_SPROT_SNAP201801 = UNIPROT_DATA_DIR+'uniprot_sprot-only2018_01.tar.gz'
 FILE_SPROT_SNAP202301 = UNIPROT_DATA_DIR+'uniprot_sprot-only2023_01.tar.gz'
@@ -69,7 +70,7 @@ FILE_UNIPROT_PROTEIN_REACTION_RELATION= UNIPROT_DATA_DIR + 'sprot_rhea_relation.
 #RHEA
 URL_RHEA_REACTION_SMILES = 'https://ftp.expasy.org/databases/rhea/tsv/rhea-reaction-smiles.tsv'
 URL_RHEA_REACTION_EC ='https://ftp.expasy.org/databases/rhea/tsv/rhea2ec.tsv'
-FILE_RHEA_REACTION = UNIPROT_DATA_DIR +'rhea_reactions.feather'
+FILE_RHEA_REACTION = RHEA_DATA_DIR +'rhea_reactions.feather'
 
 
 # 特征目录
