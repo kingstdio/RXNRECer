@@ -1,0 +1,94 @@
+############################
+# Python general
+############################
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+############################
+# Virtual environments / tools
+############################
+.env
+.venv
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+############################
+# Packaging / build artifacts
+############################
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+sdist/
+wheels/
+share/python-wheels/
+pip-wheel-metadata/
+*.egg-info/
+*.egg
+
+############################
+# Test / coverage / caches
+############################
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.cache/
+
+############################
+# Type checking / linters
+############################
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.pyre/
+
+############################
+# Jupyter / notebooks
+############################
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+############################
+# Docs
+############################
+docs/_build/
+site/
+
+############################
+# IDE / OS files
+############################
+.idea/
+.vscode/
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+############################
+# Logs
+############################
+logs/
+*.log
+
+############################
+# Project-specific
+############################
+data/*
+results/*
+models/
+rxnrecer.egg-info/
+examples/*.tsv
+scripts/*.slurm.out
+scripts/*.log
+__init__.py

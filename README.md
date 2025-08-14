@@ -1,93 +1,218 @@
-# RXNRECer_PRODUCTION
+# RXNRECer
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+**RXNRECer** is a deep learning-based tool for predicting enzyme-catalyzed reactions from protein sequences using PLM and LLM.
 
-## Getting started
+## 🚀 Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **Protein Sequence Analysis**: Process protein sequences in FASTA format
+- **Deep Learning Models**: ESM-2 embeddings with BGRU and attention
+- **Reaction Prediction**: Predict enzyme-catalyzed reactions with confidence scores
+- **Multiple Output Formats**: Support for TSV, CSV, and JSON outputs
+- **Batch Processing**: Efficient batch processing for large datasets
+- **Ensemble Methods**: Support for ensemble predictions
+- **Easy-to-use CLI**: Simple command-line interface
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## 📋 Requirements
 
-## Add your files
+- Python 3.8+
+- PyTorch 2.0+
+- CUDA (optional, for GPU acceleration)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 🛠️ Installation
+
+### Quick Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/rxnrecer.git
+cd rxnrecer
+
+# Run the setup script
+./scripts/setup_environment.sh
+```
+
+### Manual Installation
+
+```bash
+# Create virtual environment
+python -m venv rxnrecer
+source rxnrecer/bin/activate  # On Windows: rxnrecer\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+```
+
+## 🚀 Quick Start
+
+### Basic Usage
+
+```python
+import rxnrecer
+
+# Initialize predictor
+predictor = rxnrecer.RXNRECerPredictor()
+
+# Load model (if you have a pre-trained model)
+predictor.load_model("path/to/model.pth")
+
+# Predict reactions
+predictions = predictor.predict("input.fasta")
+```
+
+### Command Line Interface
+
+```bash
+# Basic prediction
+rxnrecer predict input.fasta output.tsv
+
+# With custom parameters
+rxnrecer predict input.fasta output.json \
+    --batch-size 50 \
+    --top-k 10 \
+    --format json \
+    --equations
+
+# Verbose output
+rxnrecer predict input.fasta output.tsv --verbose
+```
+
+## 📁 Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://git.tibhpc.net/database-network/rxnrecer_production.git
-git branch -M main
-git push -uf origin main
+rxnrecer/
+├── rxnrecer/                 # Main package
+│   ├── core/                # Core functionality
+│   ├── models/              # Model definitions
+│   ├── data/                # Data processing
+│   ├── utils/               # Utility functions
+│   ├── config/              # Configuration
+│   └── cli/                 # Command-line interface
+├── scripts/                 # Setup and utility scripts
+├── tests/                   # Test suite
+├── docs/                    # Documentation
+├── data/                    # Data directory
+├── results/                 # Results directory
+└── notebooks/               # Jupyter notebooks
 ```
 
-## Integrate with your tools
+## 🔧 Configuration
 
-- [ ] [Set up project integrations](http://172.16.25.29/database-network/rxnrecer_production/-/settings/integrations)
+### Model Configuration
 
-## Collaborate with your team
+```python
+from rxnrecer.config.model_config import ModelConfig
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+config = ModelConfig(
+    esm_out_dim=1280,
+    gru_h_dim=512,
+    att_dim=32,
+    dropout_rate=0.2,
+    batch_size=32,
+    top_k=5
+)
+```
 
-## Test and Deploy
+### Environment Variables
 
-Use the built-in continuous integration in GitLab.
+```bash
+# Set environment variables
+export RXNRECER_ENV=production
+export LOG_LEVEL=INFO
+export DEVICE=cuda
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## 📊 Input Format
 
-***
+### FASTA File
 
-# Editing this README
+```
+>P12345
+MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG
+>P67890
+MKLIVWALVLAFLACQGAVLGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEKIPVDGIKIVGDMVEV
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## 📈 Output Format
 
-## Suggestions for a good README
+### TSV Output
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```tsv
+uniprot_id	top_predictions	top_probabilities	confidence
+P12345	RXN-12345;RXN-67890;RXN-11111	0.8500;0.1200;0.0300	0.8500
+P67890	RXN-67890;RXN-12345;RXN-22222	0.9200;0.0600;0.0200	0.9200
+```
 
-## Name
-Choose a self-explaining name for your project.
+### JSON Output
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```json
+[
+  {
+    "uniprot_id": "P12345",
+    "top_predictions": ["RXN-12345", "RXN-67890", "RXN-11111"],
+    "top_probabilities": [0.8500, 0.1200, 0.0300],
+    "confidence": 0.8500
+  }
+]
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## 🧪 Testing
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+```bash
+# Run all tests
+pytest
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# Run with coverage
+pytest --cov=rxnrecer
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+# Run specific test
+pytest tests/test_predictor.py
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## 📚 Documentation
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+- [API Documentation](docs/api.md)
+- [User Guide](docs/user_guide.md)
+- [Developer Guide](docs/developer_guide.md)
+- [Examples](docs/examples/)
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## 🤝 Contributing
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## 📄 License
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## License
-For open source projects, say how it is licensed.
+## 🙏 Acknowledgments
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- [ESM-2](https://github.com/facebookresearch/esm) for protein language models
+- [PyTorch](https://pytorch.org/) for deep learning framework
+- [BioPython](https://biopython.org/) for bioinformatics tools
+
+## 📞 Contact
+
+- **Author**: Zhenkun Shi
+- **Email**: zhenkun.shi@tib.cas.cn
+- **Project**: [https://github.com/kingstdio/rxnrecer](https://github.com/kingstdio/rxnrecer)
+
+## 🔄 Changelog
+
+### Version 1.0.0
+- Complete project restructuring
+- Modular architecture with clear separation of concerns
+- Improved configuration management
+- Enhanced CLI interface
+- Comprehensive documentation
+- Unit tests and development tools
+
