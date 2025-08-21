@@ -4,6 +4,7 @@ sys.path.insert(1,'../')
 from config import conf as cfg
 import pandas as pd
 import numpy as np
+import time
 from types import SimpleNamespace
 from Bio import SeqIO
 import torch
@@ -339,7 +340,6 @@ def get_ensemble(input_df, rxnrecer_df):
         axis=1
     )
 
-
     return res_df
     
 
@@ -417,37 +417,35 @@ def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
 
 
 
-        
-    
 
 if __name__ == '__main__':
-    # start_time = time.perf_counter()
+    start_time = time.perf_counter()
     
     
-    # # 使用argparse模块解析输入和输出文件路径
-    # parser = argparse.ArgumentParser(description='Run step by step prediction.')
-    # parser.add_argument('-i', '--input_fasta', default='data/sample/sample10.fasta', help='Path to input FASTA file')
-    # parser.add_argument('-o', '--output_file', default='results/sample/res_sample10.tsv', help='Path to output file')
-    # parser.add_argument('-f', '--format', required=False, default='tsv', help='Output format [tsv, json] (default: tsv)')
-    # parser.add_argument('-e', '--ensemble', required=False, default=True, help='Whether to use ensemble method (default: False)')
-    # parser.add_argument('-g', '--getEquation', required=False, default=False, help='Whether to fetch reaction equations (RHEA) (default: False)')
+    # 使用argparse模块解析输入和输出文件路径
+    parser = argparse.ArgumentParser(description='Run step by step prediction.')
+    parser.add_argument('-i', '--input_fasta', default='data/sample/sample10.fasta', help='Path to input FASTA file')
+    parser.add_argument('-o', '--output_file', default='results/sample/res_sample10.tsv', help='Path to output file')
+    parser.add_argument('-f', '--format', required=False, default='tsv', help='Output format [tsv, json] (default: tsv)')
+    parser.add_argument('-e', '--ensemble', required=False, default=False, help='Whether to use ensemble method (default: False)')
+    parser.add_argument('-g', '--getEquation', required=False, default=False, help='Whether to fetch reaction equations (RHEA) (default: False)')
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
     
-    # input_fasta = args.input_fasta
-    # output_file = args.output_file
-    # format = args.format
-    # useEsemble = args.ensemble
-    # getEquation = args.getEquation
+    input_fasta = args.input_fasta
+    output_file = args.output_file
+    format = args.format
+    useEsemble = args.ensemble
+    getEquation = args.getEquation
 
-    # res = step_by_step_prediction(input_data=input_fasta, output_file=output_file, output_format=format, getEquation=getEquation, Ensemble=useEsemble,)
+    res = step_by_step_prediction(input_data=input_fasta, output_file=output_file, output_format=format, getEquation=getEquation, Ensemble=useEsemble, batch_size=20)
     
-    # end_time = time.perf_counter()
-    # elapsed_time = end_time - start_time
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
     
-    # print(f'Done! \nElapsed time: {end_time - start_time:.2f} seconds')
+    print(f'Done! \nElapsed time: {end_time - start_time:.2f} seconds')
     
-    input_protein_df = pd.read_feather(cfg.FILE_DS_TEST)[['uniprot_id', 'seq']]
-    res  = step_by_step_prediction(input_protein_df, cfg.FILE_DS_DICT_RXN2ID, getEquation=False, Ensemble=True, batch_size=1000)
-    res.to_pickle(f'{cfg.TEMP_DIR}res_test5years.pkl')
+    # input_protein_df = pd.read_feather(cfg.FILE_DS_TEST)[['uniprot_id', 'seq']]
+    # res  = step_by_step_prediction(input_protein_df, cfg.FILE_DS_DICT_RXN2ID, getEquation=False, Ensemble=True, batch_size=1000)
+    # res.to_pickle(f'{cfg.TEMP_DIR}res_test5years.pkl')
     
