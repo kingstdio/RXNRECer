@@ -16,8 +16,12 @@ CODE_MODE = 'DEBUG'
 #工程路径
 DIR_PROJECT_ROOT = '/hpcfs/fhome/shizhenkun/codebase/rxnrecer_production'
 
+
 #数据目录
 DATA_ROOT =  DIR_PROJECT_ROOT + '/data/'
+#特征目录
+DIR_FEATURE_BANK =f'{DATA_ROOT}feature_bank/'
+
 
 # 临时目录
 TEMP_DIR = DIR_PROJECT_ROOT + '/temp/'
@@ -29,19 +33,24 @@ LOG_DIR = DATA_ROOT + 'log/'
 PIC_DIR = f'production/files/pic' 
 
 # 图片文件目录
-DIR_RXN_JSON = f'files/rxn_json/' 
-DIR_CPD_SVG = f'files/cpd_svg/' 
+DIR_RXN_JSON = f'{DATA_ROOT}rxn_json/' 
+DIR_CPD_SVG = f'{DATA_ROOT}cpd_svg/' 
+
+
 # 生产环境结果目录
-DIR_PRODUCTION_RES = f'files/results/'
-FILE_PRODUCTION_FEATURES = f'{DIR_PROJECT_ROOT}/files/features/featureBank.feather'
+DIR_PRODUCTION_RES = f'{DIR_PROJECT_ROOT}/files/results/'
+FILE_PRODUCTION_FEATURES = f'{DIR_FEATURE_BANK}featureBank.feather'
 FILE_PRODUCTION_FEATURES_T5 = f'{DIR_PROJECT_ROOT}/files/features/featureBank_t5.feather'
+URL_API_LLM = 'https://openrouter.ai/api/v1'
 
+FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DIR_PROJECT_ROOT}/rxnrecer/ckpt/rxnrecer/production_185846best.pth'
 
-FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DATA_ROOT}model/production_185846best.pth'
+#模型目录
+CKPT_PROSTT5 = f'{DIR_PROJECT_ROOT}/rxnrecer/ckpt/prostt5'
 
 
 # 示例文件路径
-SAMPLE_DIR = DATA_ROOT + 'samples/'
+SAMPLE_DIR = DATA_ROOT + 'sample/'
 
 
 #PDB 结构文件目录
@@ -51,13 +60,14 @@ DIR_PDB_BEST = DATA_ROOT + 'structure/pdb/rcsb2uniprot/'
 WEB_DATA_DIR = DATA_ROOT +'web/'
 UNIPROT_DATA_DIR = DATA_ROOT +'uniprot/'
 RHEA_DATA_DIR = DATA_ROOT +'rhea/'
+CHEBI_DATA_DIR = DATA_ROOT +'chebi/'
 
 SPLITER=';'
 
 #Uniprot
-URL_SPROT_SNAP201801 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2018_01/knowledgebase/uniprot_sprot-only2018_01.tar.gz'
-URL_SPROT_SNAP202301 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2023_01/knowledgebase/uniprot_sprot-only2023_01.tar.gz'
-URL_SPROT_SNAP202401 = 'https://ftp.ebi.ac.uk/pub/databases/uniprot/previous_major_releases/release-2024_01/knowledgebase/uniprot_sprot-only2024_01.tar.gz'
+URL_SPROT_SNAP201801 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2018_01/knowledgebase/uniprot_sprot-only2018_01.tar.gz'
+URL_SPROT_SNAP202301 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2023_01/knowledgebase/uniprot_sprot-only2023_01.tar.gz'
+URL_SPROT_SNAP202401 = 'https://ftp.uniprot.org/pub/databases/uniprot/previous_major_releases/release-2024_01/knowledgebase/uniprot_sprot-only2024_01.tar.gz'
 
 FILE_SPROT_SNAP201801 = UNIPROT_DATA_DIR+'uniprot_sprot-only2018_01.tar.gz'
 FILE_SPROT_SNAP202301 = UNIPROT_DATA_DIR+'uniprot_sprot-only2023_01.tar.gz'
@@ -71,6 +81,11 @@ FILE_UNIPROT_PROTEIN_REACTION_RELATION= UNIPROT_DATA_DIR + 'sprot_rhea_relation.
 URL_RHEA_REACTION_SMILES = 'https://ftp.expasy.org/databases/rhea/tsv/rhea-reaction-smiles.tsv'
 URL_RHEA_REACTION_EC ='https://ftp.expasy.org/databases/rhea/tsv/rhea2ec.tsv'
 FILE_RHEA_REACTION = RHEA_DATA_DIR +'rhea_reactions.feather'
+
+# 反应相关
+FILE_DS_RHEA_REACTIONS = f'{RHEA_DATA_DIR}ds_rhea_reactions.feather'
+FILE_DS_CHEBI_CPD = f'{CHEBI_DATA_DIR}ds_chebi_cpd.feather'
+
 
 
 # 特征目录
@@ -103,6 +118,8 @@ FILE_DS_TEST_FASTA = f'{DIR_DATASET}ds_test.fasta'
 FILE_DS_DICT_RXN2ID = f'{DATA_ROOT}dict/dict_rxn2id.json'
 FILE_DS_DICT_ID2RXN = f'{DATA_ROOT}dict/dict_id2rxn.json'
 
+FILE_DICT_RXNRECERS3_PROMPT = f'{DATA_ROOT}dict/dict_rxnrecers3_prompt.json'
+
 FILE_DS_DMND = f'{DATA_ROOT}datasets/task240524/ds_train.dmnd'
 
 FILE_DS_PDB_LIST = f'{DIR_DATASET}/ds_all_pdb_map.feather' # 所有pdb 结构列表
@@ -113,11 +130,6 @@ FILE_EMBD_PROTEIN_TDIT5 = f'{DIR_DATASET}ds_all_3di_embedding.feather' # 所有p
 
 FILE_DS_CASE_ECOLI = f'{DATA_ROOT}datasets/case/ds_case_ecoli.feather'
 
-
-# 反应相关
-FILE_DS_RHEA_REACTIONS = f'{DIR_DATASET}ds_rhea_reactions.feather'
-FILE_DS_CHEBI_CPD = f'{DIR_DATASET}ds_chebi_cpd.feather'
-FILE_DS_RHEA = f'{DIR_DATASET}ds_rhea.feather'
 
 
 
@@ -140,10 +152,6 @@ FILE_SUP_SPROT = f'{UNIPROT_DATA_DIR}uniprot_sprot_info.feather' #uniprot 蛋白
 #FOLD SEEK 数据
 DIR_FOLDSEEK_PDB = f'{DIR_PROJECT_ROOT}/results/intermediate/foldseek/'
 
-
-# 训练好的模型
-DIR_MODEL = DIR_PROJECT_ROOT + '/data/model/'
-FILE_WEIGHT_PRODUCTION_BEST_MODEL = f'{DIR_MODEL}production_185846best.pth'
 
 
 # 结果目录

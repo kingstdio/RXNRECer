@@ -64,18 +64,32 @@ def read_json_file(file_path: str) -> Dict[str, Any]:
     return clean_data(data)
 
 
-def write_json_file(data: Dict[str, Any], file_path: str, indent: int = 2) -> None:
+def write_json_file(data: Any, file_path: str, indent: int = 2, overwrite: bool = True) -> None:
     """
-    Write data to JSON file.
+    Write data to JSON file with automatic directory creation.
     
     Args:
-        data: Data to write
+        data: Data to write (dict, list, or any JSON-serializable object)
         file_path: Output file path
         indent: JSON indentation
+        overwrite: Whether to overwrite existing file (default: True)
     """
+    # Ensure directory exists
     ensure_dir(os.path.dirname(file_path))
+    
+    # Check if file exists and handle accordingly
+    if os.path.exists(file_path) and not overwrite:
+        print(f'File exists and overwrite=False: {file_path}')
+        return
+    
+    # Write data to file
     with open(file_path, 'w') as f:
-        json.dump(data, f, indent=indent)
+        if hasattr(data, 'to_json'):
+            # Handle objects with to_json method (like Reaction objects)
+            f.write(data.to_json())
+        else:
+            # Handle regular data types
+            json.dump(data, f, indent=indent, ensure_ascii=False)
 
 
 def clean_string(s: str) -> str:
@@ -269,3 +283,23 @@ def table2fasta(table, file_out):
     file.close()
     # print('Write finished')
 #endregion
+
+
+def read_json_as_object(file_path: str) -> object:
+    """
+    Read JSON file and convert to object with dot notation support.
+    
+    Args:
+        file_path: Path to JSON file
+        
+    Returns:
+        Object with dot notation access to JSON data
+        
+    Example:
+        prompt_obj = read_json_as_object('prompts.json')
+        text = prompt_obj.prompts1.text
+    """
+    from types import SimpleNamespace
+    
+    data = read_json_file(file_path)
+    return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))

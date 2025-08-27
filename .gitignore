@@ -92,3 +92,4 @@ examples/*.tsv
 scripts/*.slurm.out
 scripts/*.log
 __init__.py
+rxnrecer/ckpt/*
