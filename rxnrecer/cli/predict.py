@@ -119,7 +119,7 @@ def step_by_step_prediction(input_data,
 
     # Step 2: Load predictive model
     print(f'Step 2: Loading predictive model')
-    model, mcfg = load_model() 
+    model, mcfg = load_model(model_weight_path=cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL) 
     
         
     res = []

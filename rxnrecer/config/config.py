@@ -9,12 +9,13 @@ Description: RXNRECer配置文件 - 清理版本
 Copyright (c) 2022 by tibd, All Rights Reserved. 
 '''
 import os
+from rxnrecer.utils import file_utils
 
 CODE_MODE = 'PRODUCTION'
 # CODE_MODE = 'DEBUG'
 
 # 工程路径
-DIR_PROJECT_ROOT = '/hpcfs/fhome/shizhenkun/codebase/rxnrecer_production'
+DIR_PROJECT_ROOT = str(file_utils.get_project_root())
 
 # 数据目录
 DATA_ROOT = DIR_PROJECT_ROOT + '/data/'
@@ -26,10 +27,10 @@ TEMP_DIR = DIR_PROJECT_ROOT + '/temp/'
 SAMPLE_DIR = DATA_ROOT + 'sample/'
 
 # 模型目录
-CKPT_PROSTT5 = f'{DIR_PROJECT_ROOT}/ckpt/prostt5'
+CKPT_PROSTT5 = DIR_PROJECT_ROOT + '/ckpt/prostt5'
 
 # 生产环境模型文件
-FILE_MOLEL_PRODUCTION_BEST_MODEL = f'{DIR_PROJECT_ROOT}/ckpt/rxnrecer/production_185846best.pth'
+FILE_MOLEL_PRODUCTION_BEST_MODEL = DIR_PROJECT_ROOT + '/ckpt/rxnrecer/production_185846best.pth'
 
 # 分隔符
 SPLITER = ';'
@@ -48,7 +49,7 @@ FILE_DS_CHEBI_CPD = DATA_ROOT + 'chebi/ds_chebi_cpd.feather'
 
 # 特征文件
 FILE_PRODUCTION_FEATURES = DATA_ROOT + 'feature_bank/featureBank.feather'
-FILE_PRODUCTION_FEATURES_T5 = f'{DIR_PROJECT_ROOT}/files/features/featureBank_t5.feather'
+FILE_PRODUCTION_FEATURES_T5 = DIR_PROJECT_ROOT + '/files/features/featureBank_t5.feather'
 
 # 字典文件
 DICT_UNIPROT_RHEA = DATA_ROOT + 'dict/dict_uniprot_rhea.json'
@@ -56,11 +57,11 @@ DICT_EC_RHEA = DATA_ROOT + 'dict/dict_ec_rhea.json'
 FILE_DICT_RXNRECERS3_PROMPT = DATA_ROOT + 'dict/dict_rxnrecers3_prompt.json'
 
 # 反应和化合物相关目录
-DIR_RXN_JSON = f'{DATA_ROOT}rxn_json/'
-DIR_CPD_SVG = f'{DATA_ROOT}cpd_svg/'
+DIR_RXN_JSON = DATA_ROOT + 'rxn_json/'
+DIR_CPD_SVG = DATA_ROOT + 'cpd_svg/'
 
 # 数据集目录
-DIR_DATASET = f'{DATA_ROOT}datasets/task240524/'
+DIR_DATASET = DATA_ROOT + 'datasets/task240524/'
 
 # 结果目录
 RESULTS_DIR = DIR_PROJECT_ROOT + '/results/'
@@ -87,11 +88,11 @@ CHEBI_DATA_DIR = DATA_ROOT + 'chebi/'
 
 # Web数据
 WEB_DATA_DIR = DATA_ROOT + 'web/'
-FILE_WEB_REACTIONS = f'{WEB_DATA_DIR}web_reactions.feather'
-FILE_WEB_REACTION_ENZYME_RELATION = f'{WEB_DATA_DIR}web_reaction_enzyme_relation.feather'
-FILE_WEB_PROTEIONS = f'{WEB_DATA_DIR}web_proteins.feather'
-FILE_WEB_EC = f'{WEB_DATA_DIR}web_ec.feather'
-FILE_SUP_SPROT = f'{UNIPROT_DATA_DIR}uniprot_sprot_info.feather'
+FILE_WEB_REACTIONS = WEB_DATA_DIR + 'web_reactions.feather'
+FILE_WEB_REACTION_ENZYME_RELATION = WEB_DATA_DIR + 'web_reaction_enzyme_relation.feather'
+FILE_WEB_PROTEIONS = WEB_DATA_DIR + 'web_proteins.feather'
+FILE_WEB_EC = WEB_DATA_DIR + 'web_ec.feather'
+FILE_SUP_SPROT = UNIPROT_DATA_DIR + 'uniprot_sprot_info.feather'
 
 
 

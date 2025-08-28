@@ -6,11 +6,76 @@ import os
 import json
 import shutil
 import subprocess
-import time
 import pandas as pd
 from pathlib import Path
 from typing import  Dict,  Any
 from Bio import SeqIO
+
+
+def get_project_root() -> Path:
+    """
+    获取项目根目录，优先使用环境变量，否则智能查找
+    
+    Returns:
+        Path: 项目根目录路径
+        
+    Note:
+        优先检查环境变量RXNRECER_PROJECT_ROOT，如果没有设置，
+        则智能查找包含data/和ckpt/目录的父目录
+    """
+    # 优先使用环境变量
+    env_root = os.environ.get('RXNRECER_PROJECT_ROOT')
+    if env_root:
+        env_path = Path(env_root)
+        if (env_path / 'data').exists() and (env_path / 'ckpt').exists():
+            return env_path
+        else:
+            print(f"⚠️  警告: 环境变量RXNRECER_PROJECT_ROOT指定的路径 {env_root} 不包含必要的data和ckpt目录")
+    
+    # 智能查找项目根目录
+    # 从当前工作目录开始，向上查找包含data和ckpt的目录
+    current_dir = Path.cwd()
+    
+    # 检查当前目录
+    if (current_dir / 'data').exists() and (current_dir / 'ckpt').exists():
+        return current_dir
+    
+    # 向上查找父目录
+    for parent in current_dir.parents:
+        if (parent / 'data').exists() and (parent / 'ckpt').exists():
+            return parent
+    
+    # 如果都找不到，尝试查找脚本文件所在目录
+    script_dir = Path(__file__).parent.parent.parent
+    if (script_dir / 'data').exists() and (script_dir / 'ckpt').exists():
+        return script_dir
+    
+    # 最后尝试脚本目录的父目录
+    script_parent = script_dir.parent
+    if (script_parent / 'data').exists() and (script_parent / 'ckpt').exists():
+        return script_parent
+    
+    # 如果都找不到，使用当前目录并给出警告
+    print(f"⚠️  警告: 无法找到包含data和ckpt目录的项目根目录")
+    print(f"   当前工作目录: {current_dir}")
+    print(f"   脚本目录: {script_dir}")
+    print(f"   请确保在正确的项目目录下运行，或设置RXNRECER_PROJECT_ROOT环境变量")
+    return current_dir
+
+
+def get_data_root() -> str:
+    """获取数据目录路径"""
+    return str(get_project_root() / 'data')
+
+
+def get_ckpt_root() -> str:
+    """获取模型检查点目录路径"""
+    return str(get_project_root() / 'ckpt')
+
+
+def get_results_root() -> str:
+    """获取结果输出目录路径"""
+    return str(get_project_root() / 'results')
 
 
 def ensure_dir(directory: str) -> None:

@@ -56,10 +56,19 @@ tar -xzf ckpt.tar.gz
 
 ```bash
 # Set your API key
-export RXNRECER_LLM_API_KEY="your_api_key_here"
+export LLM_API_KEY="your_api_key_here"
 
 # Optional: Set custom API endpoint
-export RXNRECER_LLM_API_URL="https://openrouter.ai/api/v1"
+export LLM_API_URL="https://openrouter.ai/api/v1"
+```
+
+If you're using Jupyter notebooks, you need to set environment variables within the notebook:
+
+```python
+# At the beginning of your notebook, run this:
+from rxnrecer.config import config as cfg
+cfg.LLM_API_KEY = "your_actual_api_key_here"
+cfg.LLM_API_URL = "https://openrouter.ai/api/v1"
 ```
 
 ### 4. Run Prediction
@@ -156,4 +165,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Author**: Zhenkun Shi
 - **Email**: zhenkun.shi@tib.cas.cn
 - **Project**: [https://github.com/kingstdio/rxnrecer](https://github.com/kingstdio/rxnrecer)
+
+
+
 
