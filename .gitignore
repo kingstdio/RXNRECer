@@ -358,7 +358,15 @@ dmypy.json
 
 
 # Project-specific
-data/*
+
+data/chebi/*
+data/cpd_svg/*
+data/datasets/*
+data/dict/*
+data/feature_bank/*
+data/rhea/*
+data/rxn_json/*
+data/uniprot/*
 results/logs/*
 results/predictions/*
 ckpt/prostt5/*
