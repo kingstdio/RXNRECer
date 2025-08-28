@@ -19,120 +19,49 @@ It is the official implementation of "RXNRECer: Active Learning with Protein Lan
 
 - Python 3.10+
 - PyTorch 2.0+
-- CUDA 11.0+ (recommended for GPU acceleration)
-- 32GB+ RAM (for large protein datasets)
-- 40GB+ disk space (for models and data)
+- CUDA 11.0+ (recommended)
+- 32GB+ RAM
+- 40GB+ disk space
 
 ## 🚀 Quick Start
 
-### 1. Install RXNRECer
-
-#### Option 1: Install from PyPI (Recommended)
+### 1. Install
 
 ```bash
-# Install the latest stable version
+# Install from PyPI (recommended)
 pip install rxnrecer
 
-# Install with development dependencies
-pip install rxnrecer[dev]
-
-# Install with all dependencies
-pip install rxnrecer[full]
-```
-
-#### Option 2: Install from GitHub
-
-```bash
-# Install directly from GitHub
+# Or install from GitHub
 pip install git+https://github.com/kingstdio/RXNRECer.git
-
-# Install specific branch
-pip install git+https://github.com/kingstdio/RXNRECer.git@release
-
-# Install specific version
-pip install git+https://github.com/kingstdio/RXNRECer.git@v1.0.0
 ```
 
-#### Option 3: Install in Development Mode
+### 2. Download Data
 
 ```bash
-# Clone the repository
-git clone https://github.com/kingstdio/rxnrecer.git
-cd rxnrecer
+# Download required data and model files (~20.5GB total)
+rxnrecer-download-data
 
-# Install in development mode
-pip install -e .
+# Or download separately
+rxnrecer-download-data --data-only      # ~8.6GB
+rxnrecer-download-data --models-only    # ~11.9GB
 ```
 
-### 2. Download Data and Model Files
-
-**Important**: Due to GitHub file size limits, you need to download data and model files separately.
+### 3. Run Prediction
 
 ```bash
-# Download data files (~8.6GB)
-wget "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz"
+# Basic prediction (S1 mode)
+rxnrecer -i input.fasta -o output.tsv -m s1
 
-# Download model files (~11.9GB)  
-wget "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz"
+# Detailed prediction (S2 mode)
+rxnrecer -i input.fasta -o output.tsv -m s2
 
-# Extract to current directory (data.tar.gz -> data/, ckpt.tar.gz -> ckpt/)
-tar -xzf data.tar.gz
-tar -xzf ckpt.tar.gz
+# LLM reasoning (S3 mode, requires API key)
+rxnrecer -i input.fasta -o output.json -m s3 -f json
 ```
 
-### 3. Configure LLM API (Required for S3 mode)
 
-```bash
-# Set your API key
-export LLM_API_KEY="your_api_key_here"
 
-# Optional: Set custom API endpoint
-export LLM_API_URL="https://openrouter.ai/api/v1"
-```
-
-If you're using Jupyter notebooks, you need to set environment variables within the notebook:
-
-```python
-# At the beginning of your notebook, run this:
-from rxnrecer.config import config as cfg
-cfg.LLM_API_KEY = "your_actual_api_key_here"
-cfg.LLM_API_URL = "https://openrouter.ai/api/v1"
-```
-
-### 4. Run Prediction
-
-```bash
-# Basic S1 prediction
-rxnrecer -i data/sample/sample10.fasta -o results/output.tsv -m s1
-
-# S2 prediction with reaction details
-rxnrecer -i data/sample/sample10.fasta -o results/output.tsv -m s2
-
-# S3 prediction with LLM reasoning
-rxnrecer -i data/sample/sample10.fasta -o results/output.json -m s3 -f json
-```
-
-## 📁 Project Structure
-
-```
-rxnrecer/                          # Main Python package
-├── cli/                           # Command-line interface
-├── config/                        # Configuration files
-├── lib/                           # Core library modules
-├── models/                        # Neural network models
-├── preprocessing/                  # Data preprocessing
-├── utils/                         # Utility functions
-├── data/                          # Data directory (download from S3)
-└── ckpt/                          # Model checkpoints (download from S3)
-```
-
-## 🔧 Configuration
-
-### Model Modes
-
-- **S1 Mode**: Basic reaction prediction using ESM-2 embeddings
-- **S2 Mode**: Enhanced prediction with reaction details and equations
-- **S3 Mode**: Advanced prediction with LLM reasoning and confidence scoring
+## 🔧 Usage
 
 ### Command Line Options
 
@@ -140,138 +69,157 @@ rxnrecer/                          # Main Python package
 rxnrecer [OPTIONS]
 
 Options:
-  -i, --input_fasta    Input FASTA file path
+  -i, --input_fasta    Input FASTA file path (required)
   -o, --output_file    Output file path
-  -f, --format         Output format: tsv or json
-  -m, --mode           Prediction mode: s1, s2, or s3
+  -f, --format         Output format: tsv or json (default: tsv)
+  -m, --mode           Prediction mode: s1, s2, or s3 (default: s1)
   -b, --batch_size     Batch size for processing (default: 100)
+  --no-cache           Disable caching (default: enabled)
+  -v, --version        Show version
 ```
 
-## 📊 Input/Output Format
+### Examples
 
-### FASTA Input
+```bash
+# Basic usage
+rxnrecer -i proteins.fasta -o results.tsv
+
+# Custom batch size
+rxnrecer -i proteins.fasta -o results.tsv -b 50
+
+# JSON output
+rxnrecer -i proteins.fasta -o results.json -f json
+
+# Disable cache
+rxnrecer -i proteins.fasta -o results.tsv --no-cache
+```
+
+### Input Format
+
+FASTA file with protein sequences:
 
 ```
 >P12345|Sample protein 1
 MKTVRQERLKSIVRILERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG
+>P67890|Sample protein 2
+MKLIVWALLLLAAWAVERSKEPVSGAQLAEELSVSRQVIVQDIAYLRSLGYNIVATPRGYVLAGG
 ```
 
-### TSV Output (S1/S2 Mode)
+### Output Formats
 
+**TSV Output (S1/S2):**
 ```tsv
 input_id	RXNRECer	RXNRECer_with_prob	rxn_details
 P12345	RHEA:24076;RHEA:14709	0.9999;0.9999	[reaction details]
 ```
 
-### JSON Output (S3 Mode)
-
+**JSON Output (S3):**
 ```json
 [
   {
     "reaction_id": "RHEA:24076",
     "prediction_confidence": 0.9999,
-    "reaction_details": {...},
-    "reaction_rxnrecer_s3": {...}
+    "reaction_details": {...}
   }
 ]
 ```
 
-## 🤝 Contributing
+## 🆕 Features
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Smart Caching
+Results are automatically cached for faster repeated predictions:
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📦 Installation Options
-
-### PyPI Installation (Recommended)
 ```bash
-pip install rxnrecer
+# Check cache status
+rxnrecer-cache status
+
+# Clear cache
+rxnrecer-cache clear --all
 ```
 
-### GitHub Installation
-```bash
-pip install git+https://github.com/kingstdio/RXNRECer.git
-```
-
-### Development Installation
-```bash
-git clone https://github.com/kingstdio/RXNRECer.git
-cd RXNRECer
-pip install -e .
-```
-
-## 📚 Additional Documentation
-
-- **[Installation Guide](INSTALL.md)** - Detailed installation instructions
-- **[Release Notes](RELEASE_NOTES.md)** - Version information and changes
-- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment guide
-
-## 🔧 Build and Release
-
-To build and release the package:
+### Data Management
+Easy data and model file management:
 
 ```bash
-# Build package
-python scripts/build_and_release.py build
-
-# Test installation
-python scripts/build_and_release.py test
-
-# Prepare for release
-python scripts/build_and_release.py release
-```
-
-## 🚀 New Features
-
-### 📥 Automatic Data Download
-```bash
-# Download all required data and model files
+# Download data
 rxnrecer-download-data
-
-# Download only data files
-rxnrecer-download-data --data-only
-
-# Download only model files
-rxnrecer-download-data --models-only
 
 # Force re-download
 rxnrecer-download-data --force
 ```
 
-### 💾 Smart Caching System
-RXNRECer now includes an intelligent caching system that automatically stores prediction results:
+## 📁 Project Structure
 
-```bash
-# Use caching (default)
-rxnrecer -i input.fasta -o output.tsv -m s1
+```
+rxnrecer/                    # Main Python package
+├── cli/                     # Command-line interface
+├── config/                  # Configuration
+├── lib/                     # Core libraries
+│   ├── datasource/          # Data source handling
+│   ├── embedding/           # Protein embeddings
+│   ├── llm/                 # Language model integration
+│   ├── ml/                  # Machine learning utilities
+│   ├── model/               # Model architectures
+│   ├── rxn/                 # Reaction processing
+│   └── smi/                 # SMILES handling
+├── models/                  # Neural network models
+└── utils/                   # Utility functions
 
-# Disable caching
-rxnrecer -i input.fasta -o output.tsv -m s1 --no-cache
+data/                        # Data files (download required)
+├── chebi/                   # ChEBI database
+├── cpd_svg/                 # Compound SVG files
+├── datasets/                # Training datasets
+├── dict/                    # Dictionary files
+├── feature_bank/            # Feature bank
+├── rhea/                    # RHEA database
+├── rxn_json/                # Reaction JSON files
+├── sample/                  # Sample data
+└── uniprot/                 # UniProt database
 
-# Manage cache
-rxnrecer-cache status      # Show cache status
-rxnrecer-cache info        # Show cache information
-rxnrecer-cache clear --all # Clear all cache
+ckpt/                        # Model checkpoints (download required)
+├── prostt5/                 # ProSTT5 model files
+└── rxnrecer/                # RXNRECer model files
+
+results/                     # Output results
+├── cache/                   # Prediction cache
+├── logs/                    # Log files
+├── predictions/             # Prediction outputs
+└── sample/                  # Sample results
+
+docs/                        # Documentation
+scripts/                     # Build and utility scripts
 ```
 
-**Cache Benefits:**
-- ⚡ **Faster repeated predictions** - No need to recompute identical inputs
-- 💰 **Save computational resources** - Avoid redundant model inference
-- 🔄 **Automatic management** - Cache is handled transparently
-- 📊 **Smart key generation** - MD5 hash of input + parameters
+## 🔧 Configuration
+
+For S3 mode (LLM reasoning), set your API key:
+
+```bash
+export LLM_API_KEY="your_api_key_here"
+export LLM_API_URL="https://openrouter.ai/api/v1"
+```
+
+## 📚 Documentation
+
+- **[Installation Guide](docs/INSTALL.md)** - Detailed setup instructions
+- **[Release Notes](docs/RELEASE_NOTES.md)** - Version information
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 📞 Contact
 
 - **Author**: Zhenkun Shi
 - **Email**: zhenkun.shi@tib.cas.cn
-- **Project**: [https://github.com/kingstdio/rxnrecer](https://github.com/kingstdio/rxnrecer)
+- **Project**: [https://github.com/kingstdio/RXNRECer](https://github.com/kingstdio/RXNRECer)
 - **PyPI**: [https://pypi.org/project/rxnrecer/](https://pypi.org/project/rxnrecer/)
 
 

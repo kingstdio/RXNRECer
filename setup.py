@@ -56,6 +56,9 @@ setup(
             "sphinx>=5.0.0",
             "sphinx-rtd-theme>=1.0.0",
         ],
+        "full": [
+            "rxnrecer[dev,docs]",
+        ],
     },
     entry_points={
         "console_scripts": [

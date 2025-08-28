@@ -1,6 +1,6 @@
 # RXNRECer Release Notes
 
-## Version 1.0.0 - Production Release
+## Version 1.1.0 - Production Release
 
 **Release Date**: January 2025  
 **Branch**: `release` (Default branch)

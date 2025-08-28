@@ -1,7 +1,6 @@
 # Include README and license
 include README.md
 include LICENSE
-include RELEASE_NOTES.md
 include requirements.txt
 
 # Include configuration files
@@ -14,7 +13,6 @@ include ckpt/.gitkeep
 
 # Include documentation
 recursive-include docs *
-recursive-include *.md
 
 # Exclude unnecessary files
 exclude *.pyc

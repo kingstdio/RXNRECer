@@ -181,7 +181,7 @@ def create_release_notes():
         version = run_command("python -c 'import rxnrecer; print(rxnrecer.__version__)'", capture_output=True)
         print(f"Package version: {version}")
     except:
-        version = "1.0.0"
+        version = "1.1.0"
     
     release_notes = f"""# RXNRECer {version} Release Notes
 
@@ -218,9 +218,8 @@ rxnrecer --help
 
 ## 📚 Documentation
 
-- [Installation Guide](INSTALL.md)
-- [Release Notes](RELEASE_NOTES.md)
-- [Deployment Guide](DEPLOYMENT_GUIDE.md)
+- [Installation Guide](docs/INSTALL.md)
+- [Release Notes](docs/RELEASE_NOTES.md)
 
 ## 🔗 Links
 

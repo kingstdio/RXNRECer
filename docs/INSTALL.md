@@ -27,7 +27,7 @@ pip install git+https://github.com/kingstdio/RXNRECer.git
 pip install git+https://github.com/kingstdio/RXNRECer.git@release
 
 # Install specific version
-pip install git+https://github.com/kingstdio/RXNRECer.git@v1.0.0
+pip install git+https://github.com/kingstdio/RXNRECer.git@v1.1.0
 ```
 
 ### Option 3: Install in Development Mode
