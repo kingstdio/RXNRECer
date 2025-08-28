@@ -434,7 +434,7 @@ Examples:
                        help='Disable caching (default: caching enabled)')
     parser.add_argument('-v', '--version', 
                        action='version', 
-                       version='RXNRECer 1.0.0')
+                       version='RXNRECer 1.1.0')
     
     # 如果没有提供任何参数，显示帮助
     if len(sys.argv) == 1:
@@ -460,7 +460,7 @@ Examples:
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    print(f"RXNRECer v1.0.0 - Enzyme Reaction Prediction")
+    print(f"RXNRECer v1.1.0 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")

@@ -18,7 +18,7 @@ def read_requirements():
 
 setup(
     name="rxnrecer",
-    version="1.0.0",
+    version="1.1.0",
     author="Zhenkun Shi",
     author_email="zhenkun.shi@tib.cas.cn",
     description="Deep learning framework for predicting enzyme-catalyzed reactions from protein sequences",
