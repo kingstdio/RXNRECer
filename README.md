@@ -228,6 +228,45 @@ python scripts/build_and_release.py test
 python scripts/build_and_release.py release
 ```
 
+## 🚀 New Features
+
+### 📥 Automatic Data Download
+```bash
+# Download all required data and model files
+rxnrecer-download-data
+
+# Download only data files
+rxnrecer-download-data --data-only
+
+# Download only model files
+rxnrecer-download-data --models-only
+
+# Force re-download
+rxnrecer-download-data --force
+```
+
+### 💾 Smart Caching System
+RXNRECer now includes an intelligent caching system that automatically stores prediction results:
+
+```bash
+# Use caching (default)
+rxnrecer -i input.fasta -o output.tsv -m s1
+
+# Disable caching
+rxnrecer -i input.fasta -o output.tsv -m s1 --no-cache
+
+# Manage cache
+rxnrecer-cache status      # Show cache status
+rxnrecer-cache info        # Show cache information
+rxnrecer-cache clear --all # Clear all cache
+```
+
+**Cache Benefits:**
+- ⚡ **Faster repeated predictions** - No need to recompute identical inputs
+- 💰 **Save computational resources** - Avoid redundant model inference
+- 🔄 **Automatic management** - Cache is handled transparently
+- 📊 **Smart key generation** - MD5 hash of input + parameters
+
 ## 📞 Contact
 
 - **Author**: Zhenkun Shi

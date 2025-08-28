@@ -428,6 +428,10 @@ Examples:
                        type=int, 
                        default=100, 
                        help='Batch size for processing (default: 100)')
+    parser.add_argument('--no-cache', 
+                       action='store_true',
+                       default=True,
+                       help='Disable caching (default: caching enabled)')
     parser.add_argument('-v', '--version', 
                        action='version', 
                        version='RXNRECer 1.0.0')
@@ -462,7 +466,24 @@ Examples:
     print(f"Output format: {args.format}")
     print(f"Prediction mode: {args.mode}")
     print(f"Batch size: {args.batch_size}")
+    print(f"Caching: {'Disabled' if args.no_cache else 'Enabled'}")
     print("-" * 50)
+    
+    # Check cache if enabled
+    if not args.no_cache:
+        from rxnrecer import is_cached, get_cached_result
+        if is_cached(args.input_fasta, args.mode, args.format, args.batch_size):
+            print("📋 Found cached results, loading from cache...")
+            cached_result = get_cached_result(args.input_fasta, args.mode, args.format, args.batch_size)
+            if cached_result:
+                # Write cached result to output file
+                with open(args.output_file, 'w') as f:
+                    f.write(cached_result)
+                print(f"✅ Results loaded from cache and saved to {args.output_file}")
+                print(f"⏱️  Total time: {time.perf_counter() - start_time:.2f} seconds")
+                return 0
+            else:
+                print("⚠️  Cache file corrupted, proceeding with prediction...")
     
     
     if args.mode == 's3':
@@ -485,6 +506,16 @@ Examples:
         print(f"\n✅ Prediction completed successfully!")
         print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
         print(f"📁 Results saved to: {args.output_file}")
+        
+        # Save to cache if enabled
+        if not args.no_cache:
+            try:
+                from rxnrecer import save_to_cache
+                with open(args.output_file, 'r') as f:
+                    result_content = f.read()
+                save_to_cache(args.input_fasta, args.mode, args.format, args.batch_size, result_content)
+            except Exception as e:
+                print(f"⚠️  Failed to cache results: {e}")
         
     except Exception as e:
         print(f"\n❌ Error during prediction: {str(e)}")

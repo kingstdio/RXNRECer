@@ -61,6 +61,25 @@ rxnrecer/
 - GPU acceleration support
 - Streamlined data pipeline
 
+### 🆕 New Features
+
+#### 📥 Automatic Data Download
+- **One-command data acquisition**: `rxnrecer-download-data`
+- **Selective downloads**: Data-only, models-only, or complete packages
+- **Smart file management**: Automatic extraction and cleanup
+- **Progress tracking**: Real-time download progress and status
+
+#### 💾 Smart Caching System
+- **Automatic result caching**: MD5 hash-based cache keys
+- **Parameter-aware caching**: Different results for different modes/formats
+- **Transparent operation**: Works automatically without user intervention
+- **Cache management tools**: Status, info, and cleanup commands
+
+#### 🔧 Enhanced CLI Tools
+- **Data download command**: `rxnrecer-download-data`
+- **Cache management**: `rxnrecer-cache status|info|clear`
+- **Cache control**: `--no-cache` flag for individual runs
+
 ### 🐛 Bug Fixes
 
 - Removed deprecated training scripts

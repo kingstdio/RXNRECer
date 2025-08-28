@@ -267,3 +267,51 @@ After successful installation:
 ---
 
 **Happy predicting! 🚀**
+
+## 🆕 New Features
+
+### 📥 Automatic Data Download
+After installation, you can automatically download required data and model files:
+
+```bash
+# Download all files (~20.5GB total)
+rxnrecer-download-data
+
+# Download only data files (~8.6GB)
+rxnrecer-download-data --data-only
+
+# Download only model files (~11.9GB)
+rxnrecer-download-data --models-only
+
+# Force re-download (overwrite existing files)
+rxnrecer-download-data --force
+```
+
+### 💾 Smart Caching System
+RXNRECer includes an intelligent caching system that automatically stores prediction results:
+
+```bash
+# Use caching (default behavior)
+rxnrecer -i input.fasta -o output.tsv -m s1
+
+# Disable caching for this run
+rxnrecer -i input.fasta -o output.tsv -m s1 --no-cache
+
+# Check cache status
+rxnrecer-cache status
+
+# View cache information
+rxnrecer-cache info
+
+# Clear all cache
+rxnrecer-cache clear --all
+
+# Clear old cache files (older than 7 days)
+rxnrecer-cache clear --older-than 7
+```
+
+**Cache Benefits:**
+- ⚡ **Instant repeated predictions** - Identical inputs return cached results immediately
+- 💰 **Resource efficiency** - No redundant model inference
+- 🔄 **Transparent operation** - Works automatically without user intervention
+- 📊 **Smart identification** - MD5 hash ensures parameter-specific caching

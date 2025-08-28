@@ -30,7 +30,7 @@ setup(
         "Source": "https://github.com/kingstdio/RXNRECer",
         "Documentation": "https://github.com/kingstdio/RXNRECer#readme",
     },
-    packages=find_packages(),
+    packages=find_packages(include=['rxnrecer', 'rxnrecer.*']),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
@@ -60,6 +60,8 @@ setup(
     entry_points={
         "console_scripts": [
             "rxnrecer=rxnrecer.cli.predict:main",
+            "rxnrecer-download-data=rxnrecer.cli.download:download_data",
+            "rxnrecer-cache=rxnrecer.cli.cache:cache",
         ],
     },
     include_package_data=True,

@@ -72,6 +72,8 @@ Repository = "https://github.com/kingstdio/RXNRECer"
 
 [project.scripts]
 rxnrecer = "rxnrecer.cli.predict:main"
+rxnrecer-download-data = "rxnrecer.cli.download:download_data"
+rxnrecer-cache = "rxnrecer.cli.cache:cache"
 
 [project.gui-scripts]
 rxnrecer-gui = "rxnrecer.cli.predict:main"

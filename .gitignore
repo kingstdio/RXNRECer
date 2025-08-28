@@ -369,6 +369,8 @@ data/rxn_json/*
 data/uniprot/*
 results/logs/*
 results/predictions/*
+results/cache/*
+!results/cache/.gitkeep
 ckpt/prostt5/*
 ckpt/rxnrecer/*
 rxnrecer.egg-info/
