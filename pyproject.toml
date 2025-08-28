@@ -77,7 +77,7 @@ rxnrecer = "rxnrecer.cli.predict:main"
 rxnrecer-gui = "rxnrecer.cli.predict:main"
 
 [tool.setuptools]
-packages = ["rxnrecer", "rxnrecer.*"]
+packages = ["rxnrecer"]
 
 [tool.setuptools.package-data]
 rxnrecer = ["config/*.yaml", "config/*.yml"]
