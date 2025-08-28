@@ -359,8 +359,10 @@ dmypy.json
 
 # Project-specific
 data/*
-results/*
-ckpt/*
+results/logs/*
+results/predictions/*
+ckpt/prostt5/*
+ckpt/rxnrecer/*
 rxnrecer.egg-info/
 examples/*.tsv
 scripts/*.slurm.out
