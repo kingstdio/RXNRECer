@@ -1,95 +1,365 @@
-############################
-# Python general
-############################
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
 
-############################
-# Virtual environments / tools
-############################
-.env
-.venv
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-.python-version
-
-############################
-# Packaging / build artifacts
-############################
+# Distribution / packaging
+.Python
 build/
+develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
+lib/
+lib64/
+parts/
 sdist/
+var/
 wheels/
-share/python-wheels/
 pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
+.installed.cfg
 *.egg
+MANIFEST
 
-############################
-# Test / coverage / caches
-############################
-.pytest_cache/
-.coverage
-.coverage.*
-coverage.xml
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
 .hypothesis/
-.cache/
+.pytest_cache/
 
-############################
-# Type checking / linters
-############################
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
 .mypy_cache/
-.ruff_cache/
-.pytype/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
 .pyre/
 
-############################
-# Jupyter / notebooks
-############################
-.ipynb_checkpoints/
-notebooks/.ipynb_checkpoints/
+# Ruff
+.ruff_cache/
 
-############################
-# Docs
-############################
-docs/_build/
-site/
+# Pytype
+.pytype/
 
-############################
-# IDE / OS files
-############################
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
 .idea/
+
+# VS Code
 .vscode/
 *.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
-############################
-# Logs
-############################
-logs/
-*.log
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
-############################
 # Project-specific
-############################
 data/*
 results/*
-models/
+ckpt/*
 rxnrecer.egg-info/
 examples/*.tsv
 scripts/*.slurm.out
-scripts/*.log
+scripts/*.lo
 __init__.py
-rxnrecer/ckpt/*
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Large data files
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.feather
+*.parquet
+*.csv
+*.tsv
+*.json
+*.xml
+*.fasta
+*.fa
+*.faa
+*.fna
+*.ffn
+*.frn
+*.gff
+*.gtf
+*.bed
+*.bam
+*.sam
+*.vcf
+*.bcf
+
+# Model files
+*.pth
+*.pt
+*.ckpt
+*.model
+*.weights
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.tflite
+
+# Logs
+logs/
+*.log
+*.out
+*.err
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration files with sensitive information
+config.ini
+secrets.json
+.env.local
+.env.production
+*.key
+*.pem
+*.p12
+*.pfx
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+.brackets.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter specific
+.ipynb_checkpoints/
+jupyter_execute/
+
+# Conda
+.conda/
+
+# Poetry
+poetry.lock
+
+# Pipenv
+Pipfile.lock
+
+# Hatch
+.hatch/
+
+# Rye
+.rye/
+
+# pdm
+.pdm.toml
+__pypackages__/
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# Pyre
+.pyre/
+
+# Pytype
+.pytype/
+
+# Cython
+cython_debug/
+
+# Ruff
+.ruff_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

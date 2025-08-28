@@ -1,20 +1,12 @@
 import sys,os
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, f'{project_root}/../')
-
-
 import json
-import hashlib
-from pathlib import Path
 import pandas as pd
-from tqdm import tqdm
 from rxnrecer.config import config as cfg
 from rxnrecer.utils import file_utils as futils
 from rxnrecer.utils import bio_utils as butils
 from rxnrecer.lib.llm import chat as llmchat
-# from rxnrecer.lib.llm import prompt as prompt
-
-APIKEY = os.environ.get("OPENROUTER_API_KEY")
 
 
 def prompt_selector(rxnrecer_s1, rxnrecer_s2):
@@ -67,19 +59,15 @@ def make_query_batch(res_rxnrecer):
     res_rxnrecer['s3_query'] = res_rxnrecer.parallel_apply(lambda x: make_query_string(x, sys_prompt_dict), axis=1)
     return res_rxnrecer
 
-def batch_chat(res_rxnrecer, llm_model='openai/gpt-4.1', debug=False):
+def batch_chat(res_rxnrecer, api_key=None, api_url=None, llm_model='openai/gpt-4.1', debug=False):
     res = make_query_batch(res_rxnrecer)
-    res['RXNRECER-S3'] = res.apply(lambda x: single_chat(x.s3_query, llm_model, debug)['results'], axis=1)
+    res['RXNRECER-S3'] = res.apply(lambda x: single_chat(x.s3_query, llm_model, api_key, api_url, debug)['results'], axis=1)
     res = res[['input_id', 'RXNRECer-S1', 'RXNRECer-S2', 'RXNRECer_with_prob', 'RXN_details', 'RXNRECER-S3']]
     return res
-    
-    
-    
 
+def single_chat(dict_query, llm_model=None, api_key=None, api_url=None, debug=False):
 
-def single_chat(dict_query, llm_model='openai/gpt-4.1', debug=True):
-
-    chatcli = llmchat.Chat(name=llm_model, url=cfg.URL_API_LLM, api_key=APIKEY)
+    chatcli = llmchat.Chat(name=llm_model, url=api_url, api_key=api_key)
     
     if debug:
         print(dict_query)
@@ -94,9 +82,7 @@ def single_chat(dict_query, llm_model='openai/gpt-4.1', debug=True):
 
         if debug:
             print("=== RAW RESPONSE ===\n", content_str)
-
         records = json.loads(content_str)
-
         return records
 
     except Exception as e:
@@ -107,13 +93,10 @@ def single_chat(dict_query, llm_model='openai/gpt-4.1', debug=True):
         return {"results": [], "error": str(e)}
 
 
-
-
-
 if __name__ == "__main__":
     
     model1 = 'openai/gpt-4.1'
     model2 = 'anthropic/claude-sonnet-4'    
-    model = model1
+    print('rxnrecer/lib/llm/qa.py')
     
 

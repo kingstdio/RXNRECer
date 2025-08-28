@@ -6,71 +6,16 @@ import pandas as pd
 import numpy as np
 import time
 from types import SimpleNamespace
-from Bio import SeqIO
 import torch
 import argparse
-import hashlib
 from rxnrecer.lib.ml import mlpredict as predRXN
 from rxnrecer.lib.llm import qa as llm_qa
-from rxnrecer.utils import file_utils as ftool, format_utils
+from rxnrecer.utils import file_utils as ftool
+from rxnrecer.utils import format_utils
 from rxnrecer.utils import bio_utils as butils
 from tqdm import tqdm
 from collections import defaultdict
 from rxnrecer.lib.model import mactive as Mactive
-import json
-
-#region 读取 FASTA 文件并转换为 DataFrame
-def fasta_to_dataframe(fasta_file):
-    # 使用列表推导式简化数据提取
-    data = [(record.id, str(record.seq)) for record in SeqIO.parse(fasta_file, "fasta")]
-    
-    # 创建 DataFrame
-    df = pd.DataFrame(data, columns=["uniprot_id", "seq"])
-    return df
-#endregion 
-
-
-def clean_string(s):
-    if isinstance(s, str):
-        # 去除多余的转义字符
-        return s.replace('\\\\', '\\')
-    return s
-
-def clean_data(data):
-    if isinstance(data, dict):
-        # 递归处理字典中的每一个项
-        return {key: clean_data(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        # 递归处理列表中的每一个项
-        return [clean_data(item) for item in data]
-    else:
-        # 处理单一值
-        return clean_string(data)
-
-
-
-def get_rxn_details_from_rxn_json(rxn_ids):
-    
-    if rxn_ids =='-':
-        return '-'
-    rxn_ids = rxn_ids.replace(":", "_")  # 去除空格
-    rxn_id_array = rxn_ids.split(cfg.SPLITER)
-    rxn_list = []  # 用于存储每个DataFrame
-    
-    for rxn_id in rxn_id_array:
-        item = ftool.read_json_file(f"{cfg.DIR_RXN_JSON}{rxn_id}.json")
-        rxn_list.append(item)
-    res = pd.json_normalize(rxn_list)
-    return res
-
-
-
-def hash_dataframe(df):
-    # 将 DataFrame 转换为字符串格式
-    df_str = df.to_string(index=False, header=True)
-    # 创建哈希对象
-    return hashlib.md5(df_str.encode('utf-8')).hexdigest()
-
 
 
 def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
@@ -113,7 +58,7 @@ def load_data(input_data):
     if isinstance(input_data, str):
         # 假设传入的是FASTA文件路径
         print(f'Detected input is a FASTA file: {input_data}')
-        input_df = fasta_to_dataframe(fasta_file=input_data)
+        input_df = ftool.fasta_to_dataframe(fasta_file=input_data)
     elif isinstance(input_data, pd.DataFrame):
         input_df = input_data.copy().reset_index(drop=True)
     else:
@@ -149,14 +94,10 @@ def save_data(resdf, output_file, output_format='tsv'):
     output_file: 输出文件路径
     output_format: 'tsv' 或 'json'
     """
+    resdf = resdf.applymap(lambda x: format_obj(x, 4))
     if output_format == 'tsv':
-        resdf = resdf.applymap(lambda x: format_obj(x, 6))
-        resdf.to_csv(output_file, index=False, sep='\t', float_format="%.6f")
+        resdf.to_csv(output_file, index=False, sep='\t', float_format="%.4f")
     elif output_format == 'json':
-        # 与原 step_by_step_prediction 同理，可再加 rxn_details 之类的字段
-        resdf['rxn_details'] = resdf['RXNRECer'].apply(
-            lambda x: get_rxn_details_from_rxn_json(rxn_ids=x) if x != '-' else '-'
-        )
         resdf.to_json(output_file, orient='records', indent=4)
     else:
         print(f'Error: Invalid output format {output_format}. Skip saving.')
@@ -168,6 +109,10 @@ def step_by_step_prediction(input_data,
                                mode='s1',
                                batch_size=100):
     
+    if mode == 's3':
+        if not cfg.LLM_API_KEY or not cfg.LLM_API_URL:
+            print("Error: LLM API key and URL are required for S3 mode!")
+            return
     
     input_df = load_data(input_data)
     print(f'Step 1: Preparing input data, loading {len(input_df)} proteins')
@@ -263,7 +208,7 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         res_df_s2 = get_ensemble(input_df=input_df[['uniprot_id', 'seq']], rxnrecer_df=res_df_s1).rename(columns={'RXNRECer': 'RXNRECer-S2'})
         s3_input_df = res_df_s2.merge(res_df_s1[['input_id', 'RXNRECer']].rename(columns={'RXNRECer': 'RXNRECer-S1'}), on='input_id', how='left'
                             ).merge(input_df.rename(columns={'uniprot_id': 'input_id'}), on='input_id', how='left')
-        res_df_s3 = llm_qa.batch_chat(s3_input_df)
+        res_df_s3 = llm_qa.batch_chat(res_rxnrecer=s3_input_df, api_key=cfg.LLM_API_KEY, api_url=cfg.LLM_API_URL)
         res_df_s3['rxn_details'] = res_df_s3.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, 
                                                                                             RXNRECER_S3=x['RXNRECER-S3'], 
                                                                                             RXN_details=x.RXN_details, mode='s3'), axis=1)
@@ -438,30 +383,116 @@ def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
 
     
 
-if __name__ == '__main__':
+def main():
+    """Main function for command line interface"""
     start_time = time.perf_counter()
     
-    
     # 使用argparse模块解析输入和输出文件路径
-    parser = argparse.ArgumentParser(description='Run step by step prediction.')
-    parser.add_argument('-i', '--input_fasta', default='data/sample/sample10.fasta', help='Path to input FASTA file')
-    parser.add_argument('-o', '--output_file', default='results/sample/res_sample10.tsv', help='Path to output file')
-    parser.add_argument('-f', '--format', required=False, default='tsv', help='Output format [tsv, json] (default: tsv)')
-    parser.add_argument('-m', '--mode', required=False, default='s3', help='Mode [s1, s2, s3] (default: s1)')
-    parser.add_argument('-b', '--batch_size', required=False, default=100, help='Batch size (default: 100)')
-
+    parser = argparse.ArgumentParser(
+        description='RXNRECer: A deep learning-based tool for predicting enzyme-catalyzed reactions from protein sequences.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Basic S1 prediction with TSV output
+  rxnrecer -i input.fasta -o output.tsv -m s1
+  
+  # S2 prediction with JSON output
+  rxnrecer -i input.fasta -o output.json -m s2 -f json
+  
+  # S3 prediction with custom batch size
+  rxnrecer -i input.fasta -o output.tsv -m s3 -b 50
+  
+  # Use default output path (temp directory)
+  rxnrecer -i input.fasta -m s1
+        """
+    )
+    
+    parser.add_argument('-i', '--input_fasta', 
+                       type=str, 
+                       help='Path to input FASTA file (required)')
+    parser.add_argument('-o', '--output_file', 
+                       type=str, 
+                       default=f'{cfg.TEMP_DIR}res_sample10.tsv', 
+                       help='Path to output file (default: temp/res_sample10.tsv)')
+    parser.add_argument('-f', '--format', 
+                       type=str, 
+                       choices=['tsv', 'json'], 
+                       default='tsv', 
+                       help='Output format: tsv or json (default: tsv)')
+    parser.add_argument('-m', '--mode', 
+                       type=str, 
+                       choices=['s1', 's2', 's3'], 
+                       default='s1', 
+                       help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
+    parser.add_argument('-b', '--batch_size', 
+                       type=int, 
+                       default=100, 
+                       help='Batch size for processing (default: 100)')
+    parser.add_argument('-v', '--version', 
+                       action='version', 
+                       version='RXNRECer 1.0.0')
+    
+    # 如果没有提供任何参数，显示帮助
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
+    
     args = parser.parse_args()
     
-    input_fasta = args.input_fasta
-    output_file = args.output_file
-    format = args.format
-    mode = args.mode
-    batch_size = args.batch_size
+    # 检查必需参数
+    if not args.input_fasta:
+        print("Error: Input FASTA file is required!")
+        print("Use -i or --input_fasta to specify the input file.")
+        print("Use -h or --help for more information.")
+        return
+    
+    # 检查输入文件是否存在
+    if not os.path.exists(args.input_fasta):
+        print(f"Error: Input file '{args.input_fasta}' does not exist!")
+        return
+    
+    # 创建输出目录（如果不存在）
+    output_dir = os.path.dirname(args.output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    print(f"RXNRECer v1.0.0 - Enzyme Reaction Prediction")
+    print(f"Input file: {args.input_fasta}")
+    print(f"Output file: {args.output_file}")
+    print(f"Output format: {args.format}")
+    print(f"Prediction mode: {args.mode}")
+    print(f"Batch size: {args.batch_size}")
+    print("-" * 50)
+    
+    
+    if args.mode == 's3':
+        if not cfg.LLM_API_KEY or not cfg.LLM_API_URL:
+            print("Error: LLM API key and URL are required for S3 mode!")
+            return
+    
+    try:
+        res = step_by_step_prediction(
+            input_data=args.input_fasta, 
+            output_file=args.output_file, 
+            output_format=args.format,  
+            mode=args.mode, 
+            batch_size=args.batch_size
+        )
+        
+        end_time = time.perf_counter()
+        elapsed_time = end_time - start_time
+        
+        print(f"\n✅ Prediction completed successfully!")
+        print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
+        print(f"📁 Results saved to: {args.output_file}")
+        
+    except Exception as e:
+        print(f"\n❌ Error during prediction: {str(e)}")
+        print("Please check your input parameters and try again.")
+        return 1
+    
+    return 0
 
-    res = step_by_step_prediction(input_data=input_fasta, output_file=output_file, output_format=format,  mode=mode, batch_size=batch_size)
-    
-    end_time = time.perf_counter()
-    elapsed_time = end_time - start_time
-    
-    print(f'Done! \nElapsed time: {end_time - start_time:.2f} seconds')
+if __name__ == '__main__':
+    main()
     

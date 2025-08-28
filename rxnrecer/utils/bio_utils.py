@@ -13,11 +13,7 @@ import tempfile
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Union
-from pathlib import Path
-from Bio import SeqIO
-from Bio.Blast import NCBIXML
 from pandarallel import pandarallel
-# from .file_utils import dataframe_to_fasta  # centralize I/O helpers
 import requests
 from requests.exceptions import RequestException
 
@@ -69,8 +65,8 @@ def get_blast_results(train_df: pd.DataFrame, test_df: pd.DataFrame,
          tempfile.NamedTemporaryFile(delete=True, suffix='.dmnd') as db_dmnd:
         
         # Convert DataFrames to FASTA
-        dataframe_to_fasta(train_df, fasta_train.name)
-        dataframe_to_fasta(test_df, fasta_test.name)
+        ftool.dataframe_to_fasta(train_df, fasta_train.name)
+        ftool.dataframe_to_fasta(test_df, fasta_test.name)
         
         # Build DIAMOND database
         cmd1 = ["diamond", "makedb", "--in", fasta_train.name, "-d", db_dmnd.name, "--quiet"]
