@@ -27,6 +27,34 @@ It is the official implementation of "RXNRECer: Active Learning with Protein Lan
 
 ### 1. Install RXNRECer
 
+#### Option 1: Install from PyPI (Recommended)
+
+```bash
+# Install the latest stable version
+pip install rxnrecer
+
+# Install with development dependencies
+pip install rxnrecer[dev]
+
+# Install with all dependencies
+pip install rxnrecer[full]
+```
+
+#### Option 2: Install from GitHub
+
+```bash
+# Install directly from GitHub
+pip install git+https://github.com/kingstdio/RXNRECer.git
+
+# Install specific branch
+pip install git+https://github.com/kingstdio/RXNRECer.git@release
+
+# Install specific version
+pip install git+https://github.com/kingstdio/RXNRECer.git@v1.0.0
+```
+
+#### Option 3: Install in Development Mode
+
 ```bash
 # Clone the repository
 git clone https://github.com/kingstdio/rxnrecer.git
@@ -160,11 +188,52 @@ P12345	RHEA:24076;RHEA:14709	0.9999;0.9999	[reaction details]
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 📦 Installation Options
+
+### PyPI Installation (Recommended)
+```bash
+pip install rxnrecer
+```
+
+### GitHub Installation
+```bash
+pip install git+https://github.com/kingstdio/RXNRECer.git
+```
+
+### Development Installation
+```bash
+git clone https://github.com/kingstdio/RXNRECer.git
+cd RXNRECer
+pip install -e .
+```
+
+## 📚 Additional Documentation
+
+- **[Installation Guide](INSTALL.md)** - Detailed installation instructions
+- **[Release Notes](RELEASE_NOTES.md)** - Version information and changes
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment guide
+
+## 🔧 Build and Release
+
+To build and release the package:
+
+```bash
+# Build package
+python scripts/build_and_release.py build
+
+# Test installation
+python scripts/build_and_release.py test
+
+# Prepare for release
+python scripts/build_and_release.py release
+```
+
 ## 📞 Contact
 
 - **Author**: Zhenkun Shi
 - **Email**: zhenkun.shi@tib.cas.cn
 - **Project**: [https://github.com/kingstdio/rxnrecer](https://github.com/kingstdio/rxnrecer)
+- **PyPI**: [https://pypi.org/project/rxnrecer/](https://pypi.org/project/rxnrecer/)
 
 
 

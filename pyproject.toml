@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rxnrecer"
+dynamic = ["version"]
+description = "Deep learning framework for predicting enzyme-catalyzed reactions from protein sequences"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Zhenkun Shi", email = "zhenkun.shi@tib.cas.cn"}
+]
+maintainers = [
+    {name = "Zhenkun Shi", email = "zhenkun.shi@tib.cas.cn"}
+]
+keywords = ["bioinformatics", "machine-learning", "deep-learning", "protein", "enzyme", "reaction-prediction"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0,<3.0.0",
+    "torchvision>=0.15.0,<1.0.0",
+    "numpy>=1.21.0,<2.0.0",
+    "pandas>=1.3.0,<3.0.0",
+    "scikit-learn>=1.0.0,<2.0.0",
+    "transformers>=4.20.0,<5.0.0",
+    "fair-esm>=2.0.0,<3.0.0",
+    "biopython>=1.79,<2.0.0",
+    "rdkit-pypi>=2022.9.1,<2024.0.0",
+    "click>=8.0.0,<9.0.0",
+    "tqdm>=4.64.0,<5.0.0",
+    "pyyaml>=6.0,<7.0.0",
+    "requests>=2.28.0,<3.0.0",
+    "matplotlib>=3.5.0,<4.0.0",
+    "seaborn>=0.11.0,<1.0.0",
+    "plotly>=5.0.0,<6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0,<8.0.0",
+    "pytest-cov>=4.0.0,<5.0.0",
+    "black>=22.0.0,<24.0.0",
+    "flake8>=5.0.0,<7.0.0",
+    "isort>=5.10.0,<6.0.0",
+]
+docs = [
+    "sphinx>=5.0.0,<7.0.0",
+    "sphinx-rtd-theme>=1.0.0,<2.0.0",
+]
+full = [
+    "rxnrecer[dev,docs]",
+]
+
+[project.urls]
+Homepage = "https://github.com/kingstdio/RXNRECer"
+Documentation = "https://github.com/kingstdio/RXNRECer#readme"
+Repository = "https://github.com/kingstdio/RXNRECer"
+"Bug Tracker" = "https://github.com/kingstdio/RXNRECer/issues"
+"Source Code" = "https://github.com/kingstdio/RXNRECer"
+
+[project.scripts]
+rxnrecer = "rxnrecer.cli.predict:main"
+
+[project.gui-scripts]
+rxnrecer-gui = "rxnrecer.cli.predict:main"
+
+[tool.setuptools]
+packages = ["rxnrecer", "rxnrecer.*"]
+
+[tool.setuptools.package-data]
+rxnrecer = ["config/*.yaml", "config/*.yml"]
+
+[tool.setuptools.dynamic]
+version = {attr = "rxnrecer.__version__"}
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["rxnrecer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
