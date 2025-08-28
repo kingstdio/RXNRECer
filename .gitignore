@@ -205,15 +205,7 @@ $RECYCLE.BIN/
 .Trash-*
 .nfs*
 
-# Project-specific
-data/*
-results/*
-ckpt/*
-rxnrecer.egg-info/
-examples/*.tsv
-scripts/*.slurm.out
-scripts/*.lo
-__init__.py
+
 
 # Temporary files
 temp/
@@ -363,3 +355,14 @@ cython_debug/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+
+# Project-specific
+data/*
+results/*
+ckpt/*
+rxnrecer.egg-info/
+examples/*.tsv
+scripts/*.slurm.out
+scripts/*.lo
+__init__.py
