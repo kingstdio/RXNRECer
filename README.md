@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**RXNRECer** is a deep learning framework for predicting enzyme-catalyzed reactions from protein sequences.
+**RXNRECer v1.2.0** is a deep learning framework for predicting enzyme-catalyzed reactions from protein sequences.
 It is the official implementation of "RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction."
 
 ## 🚀 Features
@@ -74,7 +74,7 @@ Options:
   -f, --format         Output format: tsv or json (default: tsv)
   -m, --mode           Prediction mode: s1, s2, or s3 (default: s1)
   -b, --batch_size     Batch size for processing (default: 100)
-  --no-cache           Disable caching (default: enabled)
+  -c, --cache          Enable caching (default: enabled)
   -v, --version        Show version
 ```
 
@@ -90,8 +90,8 @@ rxnrecer -i proteins.fasta -o results.tsv -b 50
 # JSON output
 rxnrecer -i proteins.fasta -o results.json -f json
 
-# Disable cache
-rxnrecer -i proteins.fasta -o results.tsv --no-cache
+# Disable cache (by default, caching is enabled)
+rxnrecer -i proteins.fasta -o results.tsv
 ```
 
 ### Input Format
