@@ -103,11 +103,11 @@ def save_data(resdf, output_file, output_format='tsv'):
         print(f'Error: Invalid output format {output_format}. Skip saving.')
 #endregion 
 
-def step_by_step_prediction(input_data,
-                               output_file=None,
-                               output_format='tsv',
-                               mode='s1',
-                               batch_size=100):
+
+
+
+
+def step_by_step_prediction(input_data, mode='s1', batch_size=100):
     
     if mode == 's3':
         if not cfg.LLM_API_KEY or not cfg.LLM_API_URL:
@@ -142,9 +142,6 @@ def step_by_step_prediction(input_data,
             res = res + [res_batch]  # Use extend for better performance
     fres = pd.concat(res, axis=0, ignore_index=True)
     
-    if output_file is not None:
-        print(f'Step 4: Saving results to {output_file} (format={output_format})')
-        save_data(fres, output_file, output_format)
         
     fres = fres.drop_duplicates(subset=['input_id'], keep='first')
     # fres = input_df.rename(columns={'uniprot_id':'input_id'}).merge(fres, on='input_id', how='left')
@@ -387,7 +384,7 @@ def main():
     """Main function for command line interface"""
     start_time = time.perf_counter()
     
-    # 使用argparse模块解析输入和输出文件路径
+    # 1. 解析命令行参数
     parser = argparse.ArgumentParser(
         description='RXNRECer: A deep learning-based tool for predicting enzyme-catalyzed reactions from protein sequences.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -407,118 +404,85 @@ Examples:
         """
     )
     
-    parser.add_argument('-i', '--input_fasta', 
-                       type=str, 
-                       help='Path to input FASTA file (required)')
-    parser.add_argument('-o', '--output_file', 
-                       type=str, 
-                       default=f'{cfg.TEMP_DIR}res_sample10.tsv', 
-                       help='Path to output file (default: temp/res_sample10.tsv)')
-    parser.add_argument('-f', '--format', 
-                       type=str, 
-                       choices=['tsv', 'json'], 
-                       default='tsv', 
-                       help='Output format: tsv or json (default: tsv)')
-    parser.add_argument('-m', '--mode', 
-                       type=str, 
-                       choices=['s1', 's2', 's3'], 
-                       default='s1', 
-                       help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
-    parser.add_argument('-b', '--batch_size', 
-                       type=int, 
-                       default=100, 
-                       help='Batch size for processing (default: 100)')
-    parser.add_argument('--no-cache', 
-                       action='store_true',
-                       default=True,
-                       help='Disable caching (default: caching enabled)')
-    parser.add_argument('-v', '--version', 
-                       action='version', 
-                       version='RXNRECer 1.1.0')
+    parser.add_argument('-i', '--input_fasta', type=str, help='Path to input FASTA file (required)')
+    parser.add_argument('-o', '--output_file', type=str, default=f'{cfg.TEMP_DIR}res_sample10.tsv', help='Path to output file (default: temp/res_sample10.tsv)')
+    parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='tsv', help='Output format: tsv or json (default: tsv)')
+    parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
+    parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.1.0')
     
-    # 如果没有提供任何参数，显示帮助
+    # 显示帮助信息
     if len(sys.argv) == 1:
         parser.print_help()
         return
     
     args = parser.parse_args()
     
-    # 检查必需参数
+    # 2. 验证输入参数
     if not args.input_fasta:
         print("Error: Input FASTA file is required!")
         print("Use -i or --input_fasta to specify the input file.")
         print("Use -h or --help for more information.")
         return
     
-    # 检查输入文件是否存在
     if not os.path.exists(args.input_fasta):
         print(f"Error: Input file '{args.input_fasta}' does not exist!")
         return
     
-    # 创建输出目录（如果不存在）
+    # 3. 准备输出目录
     output_dir = os.path.dirname(args.output_file)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
+    # 4. 显示运行信息
     print(f"RXNRECer v1.1.0 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")
     print(f"Prediction mode: {args.mode}")
     print(f"Batch size: {args.batch_size}")
-    print(f"Caching: {'Disabled' if args.no_cache else 'Enabled'}")
     print("-" * 50)
     
-    # Check cache if enabled
-    if not args.no_cache:
-        from rxnrecer import is_cached, get_cached_result
-        if is_cached(args.input_fasta, args.mode, args.format, args.batch_size):
-            print("📋 Found cached results, loading from cache...")
-            cached_result = get_cached_result(args.input_fasta, args.mode, args.format, args.batch_size)
-            if cached_result:
-                # Write cached result to output file
-                with open(args.output_file, 'w') as f:
-                    f.write(cached_result)
+    # 5. 检查缓存
+    cache_file_name = None
+    if cfg.CACHE_ENABLED:
+        cache_file_name = ftool.get_cache_filename(input_file=args.input_fasta, mode=args.mode, output_format=args.format)
+        if cache_file_name and ftool.check_cache(cache_file_name):
+            res = ftool.load_from_cache(cache_file_name)
+            if res is not None:
+                save_data(res, args.output_file, args.format)
                 print(f"✅ Results loaded from cache and saved to {args.output_file}")
                 print(f"⏱️  Total time: {time.perf_counter() - start_time:.2f} seconds")
                 return 0
-            else:
-                print("⚠️  Cache file corrupted, proceeding with prediction...")
     
+    # 6. 验证S3模式配置
+    if args.mode == 's3' and (not cfg.LLM_API_KEY or not cfg.LLM_API_URL):
+        print("Error: LLM API key and URL are required for S3 mode!")
+        return
     
-    if args.mode == 's3':
-        if not cfg.LLM_API_KEY or not cfg.LLM_API_URL:
-            print("Error: LLM API key and URL are required for S3 mode!")
-            return
-    
+    # 7. 执行预测
     try:
         res = step_by_step_prediction(
             input_data=args.input_fasta, 
-            output_file=args.output_file, 
-            output_format=args.format,  
             mode=args.mode, 
             batch_size=args.batch_size
         )
         
-        end_time = time.perf_counter()
-        elapsed_time = end_time - start_time
+        # 8. 保存结果
+        save_data(res, args.output_file, args.format)
         
-        print(f"\n✅ Prediction completed successfully!")
+        # 9. 保存到缓存
+        if cfg.CACHE_ENABLED and cache_file_name:
+            ftool.save_to_cache(res, cache_file_name)
+        
+        # 10. 完成
+        elapsed_time = time.perf_counter() - start_time
+        print(f"✅ Prediction completed successfully!")
         print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
         print(f"📁 Results saved to: {args.output_file}")
         
-        # Save to cache if enabled
-        if not args.no_cache:
-            try:
-                from rxnrecer import save_to_cache
-                with open(args.output_file, 'r') as f:
-                    result_content = f.read()
-                save_to_cache(args.input_fasta, args.mode, args.format, args.batch_size, result_content)
-            except Exception as e:
-                print(f"⚠️  Failed to cache results: {e}")
-        
     except Exception as e:
-        print(f"\n❌ Error during prediction: {str(e)}")
+        print(f"❌ Error during prediction: {str(e)}")
         print("Please check your input parameters and try again.")
         return 1
     

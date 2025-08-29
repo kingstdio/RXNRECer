@@ -1,8 +1,10 @@
 """
 File utility functions for RXNRECer
 """
-
-import os
+import sys,os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, f'{project_root}/')
+import hashlib
 import json
 import shutil
 import subprocess
@@ -10,7 +12,8 @@ import pandas as pd
 from pathlib import Path
 from typing import  Dict,  Any
 from Bio import SeqIO
-
+import hashlib
+from rxnrecer.config import config as cfg
 
 def get_project_root() -> Path:
     """
@@ -242,7 +245,6 @@ def get_file_hash(file_path: str) -> str:
     Returns:
         MD5 hash string
     """
-    import hashlib
     
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
@@ -368,3 +370,167 @@ def read_json_as_object(file_path: str) -> object:
     
     data = read_json_file(file_path)
     return json.loads(json.dumps(data), object_hook=lambda d: SimpleNamespace(**d))
+
+
+
+def get_cache_filename(input_file, mode, output_format):
+    """生成缓存文件名，基于输入文件内容、模式和输出格式的hash"""
+    try:
+        with open(input_file, 'rb') as f:
+            file_content = f.read()
+        # 使用文件内容、模式和输出格式生成hash
+        content_hash = hashlib.md5(f'{file_content}_{mode}_{output_format}'.encode()).hexdigest()
+        return f"cache_{content_hash}"
+    except Exception as e:
+        print(f"Warning: Could not read file for cache key: {e}")
+        return None
+
+
+def check_cache(cache_filename):
+    """检查缓存是否存在，如果存在则返回缓存文件路径"""
+    
+    cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
+    # 创建缓存目录
+    
+    # 检查缓存文件是否存在
+    if os.path.exists(cache_file):
+        print(f"📋 Found cached results: {cache_filename}")
+        return True
+    else:
+        if not os.path.exists(f'{cfg.CACHE_DIR}'):
+            os.makedirs(f'{cfg.CACHE_DIR}', exist_ok=True)
+        return False
+    
+
+
+def save_to_cache(cache_data,cache_filename):
+    """保存结果到缓存"""
+    try:
+        cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
+        cache_data.to_pickle(cache_file)
+    except Exception as e:
+        print(f"Warning: Failed to cache results: {e}")
+        
+def load_from_cache(cache_filename):
+    """从缓存加载结果"""
+    try:
+        cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
+        return pd.read_pickle(cache_file)
+    except Exception as e:
+        print(f"Warning: Failed to load cached results: {e}")
+        return None
+
+
+def clear_cache(cache_filename=None, older_than_days=None):
+    """
+    清理缓存文件
+    
+    Args:
+        cache_filename (str, optional): 指定要删除的缓存文件
+        older_than_days (int, optional): 删除指定天数前的缓存文件
+    
+    Returns:
+        int: 删除的文件数量
+    """
+    try:
+        deleted_count = 0
+        
+        if cache_filename:
+            # 删除指定文件
+            cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
+            if os.path.exists(cache_file):
+                os.remove(cache_file)
+                deleted_count += 1
+                print(f"🗑️  Deleted cache file: {cache_filename}")
+            else:
+                print(f"Warning: Cache file not found: {cache_filename}")
+        elif older_than_days:
+            # 删除指定天数前的文件
+            import time
+            current_time = time.time()
+            cutoff_time = current_time - (older_than_days * 24 * 3600)
+            
+            for filename in os.listdir(cfg.CACHE_DIR):
+                if filename.endswith('.pkl'):
+                    file_path = os.path.join(cfg.CACHE_DIR, filename)
+                    if os.path.getmtime(file_path) < cutoff_time:
+                        os.remove(file_path)
+                        deleted_count += 1
+                        print(f"🗑️  Deleted old cache file: {filename}")
+        else:
+            # 删除所有缓存文件
+            for filename in os.listdir(cfg.CACHE_DIR):
+                if filename.endswith('.pkl'):
+                    file_path = os.path.join(cfg.CACHE_DIR, filename)
+                    os.remove(file_path)
+                    deleted_count += 1
+            
+            if deleted_count > 0:
+                print(f"🗑️  Deleted {deleted_count} cache files")
+        
+        return deleted_count
+        
+    except PermissionError:
+        print(f"Error: Permission denied clearing cache")
+        return 0
+    except OSError as e:
+        print(f"Error: OS error clearing cache: {e}")
+        return 0
+    except Exception as e:
+        print(f"Warning: Unexpected error clearing cache: {e}")
+        return 0
+
+
+def get_cache_info():
+    """
+    获取缓存信息
+    
+    Returns:
+        dict: 包含缓存统计信息的字典
+    """
+    try:
+        if not os.path.exists(cfg.CACHE_DIR):
+            return {
+                'cache_dir': cfg.CACHE_DIR,
+                'total_files': 0,
+                'total_size_mb': 0.0,
+                'oldest_file': None,
+                'newest_file': None
+            }
+        
+        cache_files = [f for f in os.listdir(cfg.CACHE_DIR) if f.endswith('.pkl')]
+        
+        if not cache_files:
+            return {
+                'cache_dir': cfg.CACHE_DIR,
+                'total_files': 0,
+                'total_size_mb': 0.0,
+                'oldest_file': None,
+                'newest_file': None
+            }
+        
+        total_size = 0
+        file_times = []
+        
+        for filename in cache_files:
+            file_path = os.path.join(cfg.CACHE_DIR, filename)
+            file_size = os.path.getsize(file_path)
+            file_time = os.path.getmtime(file_path)
+            
+            total_size += file_size
+            file_times.append((filename, file_time))
+        
+        # 按时间排序
+        file_times.sort(key=lambda x: x[1])
+        
+        return {
+            'cache_dir': cfg.CACHE_DIR,
+            'total_files': len(cache_files),
+            'total_size_mb': round(total_size / (1024 * 1024), 2),
+            'oldest_file': file_times[0][0] if file_times else None,
+            'newest_file': file_times[-1][0] if file_times else None
+        }
+        
+    except Exception as e:
+        print(f"Warning: Failed to get cache info: {e}")
+        return None

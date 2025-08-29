@@ -13,12 +13,17 @@ from rxnrecer.utils import file_utils
 
 CODE_MODE = 'PRODUCTION'
 # CODE_MODE = 'DEBUG'
+# 缓存配置
+CACHE_ENABLED = True
 
 # 工程路径
 DIR_PROJECT_ROOT = str(file_utils.get_project_root())
 
 # 数据目录
 DATA_ROOT = DIR_PROJECT_ROOT + '/data/'
+
+# 缓存目录
+CACHE_DIR = DIR_PROJECT_ROOT + '/results/cache/'
 
 # 临时目录
 TEMP_DIR = DIR_PROJECT_ROOT + '/temp/'
@@ -69,6 +74,8 @@ RESULTS_DIR = DIR_PROJECT_ROOT + '/results/'
 # LLM API配置
 LLM_API_URL = os.environ.get('LLM_API_URL', '')
 LLM_API_KEY = os.environ.get('LLM_API_KEY', '')
+
+
 
 # Uniprot相关
 UNIPROT_DATA_DIR = DATA_ROOT + 'uniprot/'
