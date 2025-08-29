@@ -1,49 +1,53 @@
 # RXNRECer Release Notes
 
-## Version 1.1.0 - Production Release
+## Version 1.2.0 - PyPI Release
 
-**Release Date**: January 2025  
-**Branch**: `release` (Default branch)
+**Release Date**: August 2025  
+**Status**: Production Ready
 
 ### 🎉 Major Features
 
-- **Production-Ready CLI**: Complete command-line interface for easy deployment
+- **PyPI Package**: Now available as `pip install rxnrecer`
+- **Smart Caching**: Automatic result caching for faster repeated predictions
 - **Multi-Stage Prediction**: S1 (reaction), S2 (integration), S3 (LLM reasoning) modes
 - **ESM-2 Integration**: State-of-the-art protein language model embeddings
 - **GPU Acceleration**: Full CUDA support for high-performance inference
-- **Comprehensive Documentation**: Complete user guide and API documentation
 
 ### 🚀 New Capabilities
 
+#### PyPI Installation
+```bash
+pip install rxnrecer
+```
+- ✅ One-command installation
+- ✅ Automatic dependency management
+- ✅ Global availability
+- ✅ Easy updates
+
+#### Smart Caching System
+- **Automatic caching**: Results cached by input file, mode, and format
+- **Cache management**: `rxnrecer-cache` command for status and cleanup
+- **Performance boost**: Instant results for repeated predictions
+
 #### Command Line Interface
-- `rxnrecer` command with intuitive options
-- Support for FASTA input files
-- Multiple output formats (TSV, JSON)
-- Batch processing with configurable batch sizes
-
-#### Prediction Modes
-- **S1 Mode**: Basic reaction prediction using ESM-2
-- **S2 Mode**: Enhanced prediction with reaction details
-- **S3 Mode**: Advanced prediction with LLM reasoning
-
-#### Model Architecture
-- ESM-2 protein sequence embeddings
-- Advanced neural network architectures
-- Optimized for enzyme reaction prediction
-- Support for large protein datasets
+- `rxnrecer` - Main prediction command
+- `rxnrecer-download-data` - Data and model download
+- `rxnrecer-cache` - Cache management
 
 ### 📁 Project Structure
 
 ```
-rxnrecer/
-├── cli/                    # Command-line interface
-├── config/                 # Configuration management
-├── lib/                    # Core library modules
-├── models/                 # Neural network models
-├── preprocessing/           # Data preprocessing
-├── utils/                  # Utility functions
-├── data/                   # Data directory
-└── ckpt/                   # Model checkpoints
+RXNRECer/                    # Project root
+├── rxnrecer/               # Main Python package
+│   ├── cli/                # Command-line interface
+│   ├── config/             # Configuration
+│   ├── lib/                # Core libraries
+│   └── utils/              # Utility functions
+├── data/                    # Data files (download required)
+├── ckpt/                   # Model checkpoints (download required)
+├── results/                 # Output results
+├── docs/                    # Documentation
+└── scripts/                 # Build scripts
 ```
 
 ### 🔧 Technical Requirements
@@ -54,92 +58,61 @@ rxnrecer/
 - 32GB+ RAM
 - 40GB+ disk space
 
-### 📊 Performance Improvements
-
-- Optimized memory usage for large datasets
-- Efficient batch processing
-- GPU acceleration support
-- Streamlined data pipeline
-
 ### 🆕 New Features
 
 #### 📥 Automatic Data Download
-- **One-command data acquisition**: `rxnrecer-download-data`
-- **Selective downloads**: Data-only, models-only, or complete packages
-- **Smart file management**: Automatic extraction and cleanup
-- **Progress tracking**: Real-time download progress and status
+```bash
+rxnrecer-download-data        # Download all files (~20.5GB)
+rxnrecer-download-data --data-only      # Data only (~8.6GB)
+rxnrecer-download-data --models-only    # Models only (~11.9GB)
+```
 
-#### 💾 Smart Caching System
-- **Automatic result caching**: MD5 hash-based cache keys
-- **Parameter-aware caching**: Different results for different modes/formats
-- **Transparent operation**: Works automatically without user intervention
-- **Cache management tools**: Status, info, and cleanup commands
-
-#### 🔧 Enhanced CLI Tools
-- **Data download command**: `rxnrecer-download-data`
-- **Cache management**: `rxnrecer-cache status|info|clear`
-- **Cache control**: `--no-cache` flag for individual runs
+#### 💾 Smart Caching
+```bash
+rxnrecer-cache status         # Check cache status
+rxnrecer-cache clear --all    # Clear all cache
+```
 
 ### 🐛 Bug Fixes
 
-- Removed deprecated training scripts
-- Cleaned up experimental notebooks
-- Fixed configuration issues
-- Improved error handling
+- Fixed LLM API configuration variables
+- Improved error handling in cache system
+- Cleaned up unused configuration variables
+- Fixed path resolution issues
 
 ### 📚 Documentation
 
-- Comprehensive README with examples
-- Installation and setup guide
-- API documentation
-- Usage examples for all modes
+- Updated README for PyPI installation
+- Simplified installation guide
+- Added cache management examples
+- Streamlined project structure
 
-### 🔄 Migration Guide
+### 🔄 Migration from v1.1.0
 
-This is a major release with significant changes:
-
-1. **New CLI**: Use `rxnrecer` command instead of Python scripts
-2. **Simplified Structure**: Removed experimental and training code
-3. **Production Focus**: Optimized for deployment and inference
-4. **Better Configuration**: Centralized configuration management
-
-### 📥 Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/kingstdio/RXNRECer.git
-cd RXNRECer
-
-# Checkout release branch
-git checkout release
-
-# Install in development mode
-pip install -e .
-```
+1. **Installation**: Use `pip install rxnrecer` instead of GitHub clone
+2. **Caching**: New cache system automatically improves performance
+3. **Configuration**: Simplified LLM API setup
+4. **CLI**: Enhanced commands with better help messages
 
 ### 🚀 Quick Start
 
 ```bash
-# Basic prediction
+# Install
+pip install rxnrecer
+
+# Download data
+rxnrecer-download-data
+
+# Run prediction
 rxnrecer -i input.fasta -o output.tsv -m s1
-
-# Advanced prediction with LLM
-rxnrecer -i input.fasta -o output.json -m s3 -f json
 ```
-
-### 🤝 Contributing
-
-- Fork the repository
-- Create feature branches from `release`
-- Submit pull requests
-- Follow coding standards
 
 ### 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/kingstdio/RXNRECer/issues)
-- **Documentation**: [README.md](README.md)
+- **PyPI**: https://pypi.org/project/rxnrecer/
+- **Documentation**: https://github.com/kingstdio/RXNRECer#readme
 - **Contact**: zhenkun.shi@tib.cas.cn
 
 ---
 
-**Note**: This release branch is now the default branch and contains the production-ready version of RXNRECer.
+**Get started: `pip install rxnrecer`**

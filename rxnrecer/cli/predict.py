@@ -17,7 +17,6 @@ from tqdm import tqdm
 from collections import defaultdict
 from rxnrecer.lib.model import mactive as Mactive
 
-
 def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
     mcfg = SimpleNamespace(
     #模型参数
@@ -105,8 +104,6 @@ def save_data(resdf, output_file, output_format='tsv'):
 
 
 
-
-
 def step_by_step_prediction(input_data, mode='s1', batch_size=100):
     
     if mode == 's3':
@@ -141,8 +138,7 @@ def step_by_step_prediction(input_data, mode='s1', batch_size=100):
             res_batch = single_batch_run_prediction(batch_data, model=model, mcfg=mcfg, mode=mode)
             res = res + [res_batch]  # Use extend for better performance
     fres = pd.concat(res, axis=0, ignore_index=True)
-    
-        
+            
     fres = fres.drop_duplicates(subset=['input_id'], keep='first')
     # fres = input_df.rename(columns={'uniprot_id':'input_id'}).merge(fres, on='input_id', how='left')
     return fres

@@ -19,51 +19,14 @@ data/
 
 ## 📥 Download Instructions
 
-**Important**: Due to GitHub file size limits, you need to download the data files from AWS S3.
-
-### Option 1: Direct Download from AWS S3
+Download data files using the RXNRECer command:
 
 ```bash
-# Download data files (~8.6GB)
-aws s3 cp s3://tibd-public-datasets/rxnrecer/data.tar.gz .
+# Download all data files (~8.6GB)
+rxnrecer-download-data --data-only
 
-# Extract to current directory
-tar -xzf data.tar.gz
-
-# Clean up
-rm data.tar.gz
-```
-
-### Option 2: Using wget/curl
-
-```bash
-# Download data files (~8.6GB)
-wget "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz"
-
-# Extract to current directory
-tar -xzf data.tar.gz
-
-# Clean up
-rm data.tar.gz
-```
-
-### Option 3: Using AWS CLI (Recommended)
-
-```bash
-# Install AWS CLI if not already installed
-pip install awscli
-
-# Configure AWS credentials (if needed)
-aws configure
-
-# Download data files
-aws s3 cp s3://tibd-public-datasets/rxnrecer/data.tar.gz .
-
-# Extract to current directory
-tar -xzf data.tar.gz
-
-# Clean up
-rm data.tar.gz
+# Or download everything including models (~20.5GB total)
+rxnrecer-download-data
 ```
 
 ## 🔍 Data Contents
@@ -114,24 +77,17 @@ rm data.tar.gz
 
 ## 🚀 Usage
 
-After downloading and extracting the data files:
+After downloading the data files:
 
-1. **Verify Installation**:
+1. **Test with Sample Data**:
    ```bash
-   ls -la data/
-   # Should show all subdirectories with files
-   ```
-
-2. **Test with Sample Data**:
-   ```bash
-   # Use the sample data for testing
    rxnrecer -i data/sample/sample10.fasta -o results/test_output.tsv -m s1
    ```
 
-3. **Check Data Integrity**:
+2. **Verify Data Integrity**:
    ```bash
-   # Verify data files are accessible
-   python -c "from rxnrecer.config import config; print('Data path:', config.DATA_DIR)"
+   ls -la data/
+   # Should show all subdirectories with files
    ```
 
 ## 📊 Data Sources
@@ -140,18 +96,6 @@ After downloading and extracting the data files:
 - **Rhea**: Enzyme-catalyzed reaction database
 - **ChEBI**: Chemical entities of biological interest
 - **Custom datasets**: Curated enzyme reaction datasets
-
-## 🔧 Configuration
-
-Data paths are configured in `rxnrecer/config/config.py`:
-```python
-# Data configuration
-DATA_DIR = "data/"
-UNIPROT_DIR = "data/uniprot/"
-RHEA_DIR = "data/rhea/"
-CHEBI_DIR = "data/chebi/"
-FEATURE_BANK_DIR = "data/feature_bank/"
-```
 
 ## ⚠️ Important Notes
 
@@ -164,29 +108,16 @@ FEATURE_BANK_DIR = "data/feature_bank/"
 
 ### Download Issues
 - Check your internet connection
-- Verify AWS S3 bucket accessibility
 - Ensure sufficient disk space
-
-### Extraction Issues
-- Verify the downloaded file is complete
-- Check file permissions
-- Ensure tar command is available
+- Verify the download completed successfully
 
 ### Permission Issues
 - Run `chmod -R 755 data/` after extraction
 - Check user permissions on the directory
 
-## 📞 Support
-
-If you encounter issues with data files:
-1. Check the download completed successfully
-2. Verify file permissions and disk space
-3. Check the log files for error messages
-4. Contact: zhenkun.shi@tib.cas.cn
 
 ## 🔗 Related Links
 
-- **AWS S3 Bucket**: s3://tibd-public-datasets/rxnrecer/
 - **UniProt**: https://www.uniprot.org/
 - **Rhea**: https://www.rhea-db.org/
 - **ChEBI**: https://www.ebi.ac.uk/chebi/

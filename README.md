@@ -3,9 +3,12 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI](https://img.shields.io/badge/PyPI-rxnrecer-blue.svg)](https://pypi.org/project/rxnrecer/)
 
 **RXNRECer v1.2.0** is a deep learning framework for predicting enzyme-catalyzed reactions from protein sequences.
 It is the official implementation of "RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction."
+
+**🎉 Now available on PyPI for easy installation!**
 
 ## 🚀 Features
 
@@ -14,6 +17,7 @@ It is the official implementation of "RXNRECer: Active Learning with Protein Lan
 - **Deep Learning Models**: ESM-2 embeddings with advanced neural architectures
 - **GPU Acceleration**: CUDA support for faster inference
 - **Easy-to-use CLI**: Simple command-line interface with comprehensive options
+- **Smart Caching**: Automatic result caching for faster repeated predictions
 
 ## 📋 Requirements
 
@@ -25,7 +29,7 @@ It is the official implementation of "RXNRECer: Active Learning with Protein Lan
 
 ## 🚀 Quick Start
 
-### 1. Install
+### 1. Install (Recommended)
 
 ```bash
 # Install from PyPI (recommended)
@@ -59,8 +63,6 @@ rxnrecer -i input.fasta -o output.tsv -m s2
 rxnrecer -i input.fasta -o output.json -m s3 -f json
 ```
 
-
-
 ## 🔧 Usage
 
 ### Command Line Options
@@ -74,7 +76,6 @@ Options:
   -f, --format         Output format: tsv or json (default: tsv)
   -m, --mode           Prediction mode: s1, s2, or s3 (default: s1)
   -b, --batch_size     Batch size for processing (default: 100)
-  -c, --cache          Enable caching (default: enabled)
   -v, --version        Show version
 ```
 
@@ -90,8 +91,8 @@ rxnrecer -i proteins.fasta -o results.tsv -b 50
 # JSON output
 rxnrecer -i proteins.fasta -o results.json -f json
 
-# Disable cache (by default, caching is enabled)
-rxnrecer -i proteins.fasta -o results.tsv
+# Use default output path
+rxnrecer -i proteins.fasta -m s1
 ```
 
 ### Input Format
@@ -124,7 +125,7 @@ P12345	RHEA:24076;RHEA:14709	0.9999;0.9999	[reaction details]
 ]
 ```
 
-## 🆕 Features
+## 🆕 Advanced Features
 
 ### Smart Caching
 Results are automatically cached for faster repeated predictions:
@@ -151,43 +152,48 @@ rxnrecer-download-data --force
 ## 📁 Project Structure
 
 ```
-rxnrecer/                    # Main Python package
-├── cli/                     # Command-line interface
-├── config/                  # Configuration
-├── lib/                     # Core libraries
-│   ├── datasource/          # Data source handling
-│   ├── embedding/           # Protein embeddings
-│   ├── llm/                 # Language model integration
-│   ├── ml/                  # Machine learning utilities
-│   ├── model/               # Model architectures
-│   ├── rxn/                 # Reaction processing
-│   └── smi/                 # SMILES handling
-├── models/                  # Neural network models
-└── utils/                   # Utility functions
-
-data/                        # Data files (download required)
-├── chebi/                   # ChEBI database
-├── cpd_svg/                 # Compound SVG files
-├── datasets/                # Training datasets
-├── dict/                    # Dictionary files
-├── feature_bank/            # Feature bank
-├── rhea/                    # RHEA database
-├── rxn_json/                # Reaction JSON files
-├── sample/                  # Sample data
-└── uniprot/                 # UniProt database
-
-ckpt/                        # Model checkpoints (download required)
-├── prostt5/                 # ProSTT5 model files
-└── rxnrecer/                # RXNRECer model files
-
-results/                     # Output results
-├── cache/                   # Prediction cache
-├── logs/                    # Log files
-├── predictions/             # Prediction outputs
-└── sample/                  # Sample results
-
-docs/                        # Documentation
-scripts/                     # Build and utility scripts
+RXNRECer/                    # Project root
+├── rxnrecer/               # Main Python package
+│   ├── cli/                # Command-line interface
+│   ├── config/             # Configuration
+│   ├── lib/                # Core libraries
+│   │   ├── datasource/     # Data source handling
+│   │   ├── embedding/      # Protein embeddings
+│   │   ├── llm/            # Language model integration
+│   │   ├── ml/             # Machine learning utilities
+│   │   ├── model/          # Model architectures
+│   │   ├── rxn/            # Reaction processing
+│   │   └── smi/            # SMILES handling
+│   ├── models/             # Neural network models
+│   └── utils/              # Utility functions
+│
+├── data/                    # Data files (download required)
+│   ├── chebi/              # ChEBI database
+│   ├── cpd_svg/            # Compound SVG files
+│   ├── datasets/            # Training datasets
+│   ├── dict/               # Dictionary files
+│   ├── feature_bank/       # Feature bank
+│   ├── rhea/               # RHEA database
+│   ├── rxn_json/           # Reaction JSON files
+│   ├── sample/             # Sample data
+│   └── uniprot/            # UniProt database
+│
+├── ckpt/                   # Model checkpoints (download required)
+│   ├── prostt5/            # ProSTT5 model files
+│   └── rxnrecer/           # RXNRECer model files
+│
+├── results/                 # Output results
+│   ├── cache/              # Prediction cache
+│   ├── logs/               # Log files
+│   ├── predictions/        # Prediction outputs
+│   └── sample/             # Sample results
+│
+├── docs/                    # Documentation
+├── scripts/                 # Build and utility scripts
+├── README.md               # This file
+├── LICENSE                 # MIT License
+├── environment_rxnrecer-release.yml  # Conda environment
+└── .gitignore             # Git ignore rules
 ```
 
 ## 🔧 Configuration
@@ -196,8 +202,49 @@ For S3 mode (LLM reasoning), set your API key:
 
 ```bash
 export LLM_API_KEY="your_api_key_here"
-export LLM_API_URL="https://openrouter.ai/api/v1"
+export LLM_API_URL="your_api_url_here"
 ```
+
+**Examples:**
+
+```bash
+# OpenRouter
+export LLM_API_KEY="sk-or-v1-your_openrouter_key_here"
+export LLM_API_URL="https://openrouter.ai/api/v1"
+
+# OpenAI
+export LLM_API_KEY="sk-your_openai_key_here"
+export LLM_API_URL="https://api.openai.com/v1"
+
+# Anthropic
+export LLM_API_KEY="sk-ant-your_anthropic_key_here"
+export LLM_API_URL="https://api.anthropic.com"
+```
+
+### Jupyter Notebook Setup
+
+```python
+import os
+from rxnrecer.config import config as cfg
+
+# Set your API credentials
+cfg.LLM_API_KEY = "your_api_key_here"
+cfg.LLM_API_URL = "your_api_url_here"
+```
+
+## 📦 Installation Options
+
+### PyPI Installation (Recommended)
+```bash
+pip install rxnrecer
+```
+
+### GitHub Installation (Latest)
+```bash
+pip install git+https://github.com/kingstdio/RXNRECer.git
+```
+- 🔧 **Development**: Latest development version
+- 🔧 **Custom**: For advanced users
 
 ## 📚 Documentation
 
@@ -221,6 +268,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Email**: zhenkun.shi@tib.cas.cn
 - **Project**: [https://github.com/kingstdio/RXNRECer](https://github.com/kingstdio/RXNRECer)
 - **PyPI**: [https://pypi.org/project/rxnrecer/](https://pypi.org/project/rxnrecer/)
+
+---
+
+**🎯 Get started now with: `pip install rxnrecer`**
 
 
 
