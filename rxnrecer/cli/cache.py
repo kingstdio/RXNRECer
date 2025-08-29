@@ -14,6 +14,10 @@ def cache():
     """Manage RXNRECer prediction cache."""
     pass
 
+def main():
+    """Main entry point for cache command."""
+    cache()
+
 @cache.command()
 def status():
     """Show cache status and statistics."""
