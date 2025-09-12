@@ -515,28 +515,6 @@ def show_methods_eva_fig(res_metrics_data):
     return fig
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def get_simi_Pred(pred_list, uniprot_rxn_dict, topk=3):
     uniprot_id_list = [item[0] for item in pred_list][:topk]
     rxn_ids = [uniprot_rxn_dict.get(uniprot_id) for uniprot_id in uniprot_id_list]
