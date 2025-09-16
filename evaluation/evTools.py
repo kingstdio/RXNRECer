@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import plotly.graph_objects as go
 from IPython.display import HTML
 from pandarallel import pandarallel  # Importing pandarallel for parallel processing
-
+import itertools
 # Setting up the path for the module
 sys.path.insert(0, os.path.dirname(os.path.realpath('__file__')))
 sys.path.insert(1, '../')
@@ -649,3 +649,202 @@ def eva_cross_validation(res_df, lb_groundtruth, lb_predict, num_folds=10):
     eva_metrics = pd.concat(eva_metrics, axis=0).reset_index(drop=True)
     
     return eva_metrics
+
+
+
+#====集成评估
+
+# 计算指标的函数
+def calculate_single_metric(method, avg_type, df, ground_truth_col):
+    """计算单个方法的指标"""
+    try:
+        res = calculate_metrics(eva_df=df, ground_truth_col=ground_truth_col, pred_col=method, eva_name=method, avg_method=avg_type)
+        return res
+    except Exception as e:
+        print(f"计算 {method} 的 {avg_type} 指标时出错: {e}")
+        return None
+
+def get_metrics(pred_cols, avg_types, df, ground_truth_col='rxn_groundtruth', n_jobs=20):
+    """
+    计算指定列的指标（并发版本）
+    
+    Parameters:
+    - pred_cols: 需要计算指标的预测列名列表
+    - avg_types: 平均类型列表
+    - df: 数据框
+    - ground_truth_col: 真实标签列名
+    - n_jobs: 并发数
+    """
+    from joblib import Parallel, delayed
+    
+    # 创建任务列表
+    tasks = []
+    for method in pred_cols:
+        for avg_type in avg_types:
+            tasks.append((method, avg_type, df, ground_truth_col))
+    
+    # 使用 joblib 并发计算
+    results = Parallel(n_jobs=n_jobs, backend='threading')(
+        delayed(calculate_single_metric)(method, avg_type, df, ground_truth_col) 
+        for method, avg_type, df, ground_truth_col in tasks
+    )
+    
+    # 过滤掉 None 结果
+    valid_results = [r for r in results if r is not None]
+    
+    if valid_results:
+        combined_metrics = pd.concat(valid_results, ignore_index=True)
+        return combined_metrics
+    else:
+        return pd.DataFrame()
+    
+# 集成方法    
+# 投票方法
+# recall_boosted_ensemble函数
+def recall_boosted_ensemble(res_array):
+    """
+    对多个 one-hot 编码数组进行并集操作
+    规则：如果任一位置为1，则结果为1；只有当所有位置都为0时，结果才为0
+    
+    Parameters:
+    - res_array: one-hot 编码数组列表，包含多个数组
+    
+    Returns:
+    - 并集结果数组
+    """
+    return np.maximum.reduce(res_array).astype(int)
+
+# 众数投票集成方法
+def majority_vote_with_priority(arrays, priority_array, s1first=False):
+    """
+    众数投票集成方法，以priority_array为基准
+    规则：priority_array为1则结果为1，否则按众数投票（相等时优先选1）
+    
+    Parameters:
+    - arrays: one-hot编码数组列表
+    - priority_array: 基准数组（如ESMwithCLF）
+    
+    Returns:
+    - 投票结果数组
+    """
+    # 以priority_array为基准
+    result = priority_array.copy().astype(int)
+    
+    # 决定哪些位置需要投票
+    if s1first:  
+        zero_mask = (priority_array == 0)  # 只在priority为0的位置投票
+    else:
+        zero_mask = np.ones_like(priority_array, dtype=bool)  # 所有位置都投票
+    
+    
+    if np.any(zero_mask):
+        # 计算众数：1的个数 >= 总数的一半则为1
+        stacked = np.stack(arrays, axis=0)
+        ones_count = np.sum(stacked, axis=0)
+        majority = (ones_count >= len(arrays) / 2)
+        result[zero_mask] = majority[zero_mask].astype(int)
+    
+    return result
+
+def get_combinations_without_order(items, r=None):
+    """
+    生成任意输入 items 的无序组合。
+    
+    Parameters:
+    - items: 可迭代对象（列表、数组等）
+    - r: 组合大小
+         - None: 返回所有大小为 2..len(items) 的组合
+         - int: 返回该大小的组合
+         - 可迭代的 int: 返回这些大小的组合并集
+    
+    Returns:
+    - List[Tuple]: 每个元素是一个组合元组
+    """
+    n = len(items)
+    if n == 0:
+        return []
+
+    # 规范化 r
+    if r is None:
+        sizes = range(2, n + 1)
+    elif isinstance(r, int):
+        sizes = [r]
+    else:
+        # 可迭代的 int
+        sizes = []
+        for k in r:
+            try:
+                k = int(k)
+                if 1 <= k <= n:
+                    sizes.append(k)
+            except Exception:
+                continue
+        # 去重且保持顺序
+        sizes = list(dict.fromkeys(sizes))
+        if not sizes:
+            return []
+
+    res = []
+    for k in sizes:
+        if 1 <= k <= n:
+            res.extend(itertools.combinations(items, k))
+            
+    res = [list(item) for item in res]
+    return res
+
+
+# 通用集成方法计算函数
+
+def calculate_ensemble_metrics(cb_methods, baseline_method='ESMwithCLF', df=None, 
+                              ground_truth_col='rxn_groundtruth', avg_types=['weighted'],
+                              combination_sizes=[2, 3, 4], ensemble_types=['recall_boosted', 'majority']):
+    """
+    通用集成方法计算函数
+    
+    Parameters:
+    - cb_methods: 候选方法列表
+    - baseline_method: 基准方法名
+    - df: 数据框
+    - ground_truth_col: 真实标签列名
+    - avg_types: 平均类型列表
+    - combination_sizes: 组合大小列表，如[2, 3, 4]
+    - ensemble_types: 集成类型列表，如['recall_boosted', 'majority']
+    
+    Returns:
+    - 所有集成方法的指标DataFrame
+    """
+    all_metrics = []
+    
+    for size in combination_sizes:
+        # 获取指定大小的组合
+        combinations = get_combinations_without_order(cb_methods, r=size)
+        print(f"计算 {size + 1} 个方法的组合, 共 {len(combinations)} 个")
+        
+        for ensemble_type in ensemble_types:
+            print(f"  计算 {ensemble_type} 集成...")
+            
+            # 生成列名
+            col_names = []
+            for combo in combinations:
+                col_name = '_'.join(combo) + f'_{baseline_method}_{ensemble_type}'
+                col_names.append(col_name)
+            
+            # 计算集成结果
+            for i, combo in enumerate(combinations):
+                if ensemble_type == 'recall_boosted':
+                    # 召回率提升集成（逻辑或）
+                    df[col_names[i]] = df.apply(lambda x: recall_boosted_ensemble([x[method] for method in combo] + [x[baseline_method]]), axis=1)
+                elif ensemble_type == 'majority':
+                    # 众数投票集成
+                    df[col_names[i]] = df.apply(lambda x: majority_vote_with_priority([x[method] for method in combo], x[baseline_method], s1first=True), axis=1)
+            
+            # 计算指标
+            metrics = get_metrics(pred_cols=col_names, avg_types=avg_types, df=df, ground_truth_col=ground_truth_col)
+            all_metrics.append(metrics)
+    
+    # 合并所有结果
+    if all_metrics:
+        return pd.concat(all_metrics, ignore_index=True)
+    else:
+        return pd.DataFrame()
+

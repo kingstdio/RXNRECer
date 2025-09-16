@@ -14,7 +14,7 @@ sys.path.insert(1, '../')
 
 
 
-def getUnirep(sequences, batch_size=10):
+def getUnirep(sequences, batch_size=20):
     """
     This function computes the unirep (h_avg) for each sequence in the input dataframe.
     The sequences are processed in batches to improve efficiency.
