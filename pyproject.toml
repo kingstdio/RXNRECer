@@ -18,7 +18,6 @@ keywords = ["bioinformatics", "enzyme", "reaction", "prediction", "deep learning
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -73,7 +72,7 @@ rxnrecer-download-data = "rxnrecer.cli.download:download_data"
 rxnrecer-cache = "rxnrecer.cli.cache:cache"
 
 [tool.setuptools.dynamic]
-version = {attr = "version.__version__"}
+version = {attr = "rxnrecer.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -14,8 +14,21 @@ import hashlib
 import json
 from pathlib import Path
 
-# Import version information
-from version import __version__, __version_info__, get_version, get_version_info, get_full_version
+# Version information
+__version__ = "1.3.1"
+__version_info__ = (1, 3, 1)
+
+def get_version():
+    """Get the version string."""
+    return __version__
+
+def get_version_info():
+    """Get the version tuple."""
+    return __version_info__
+
+def get_full_version():
+    """Get the full version string with build info."""
+    return f"{__version__} (2024-09-26)"
 
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
