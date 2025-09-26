@@ -43,6 +43,7 @@ dependencies = [
     "pyarrow>=10.0.0",
     "fair-esm>=2.0.0",
     "transformers>=4.20.0",
+    "pandarallel>=1.6.0",
 ]
 
 [project.optional-dependencies]

@@ -419,7 +419,7 @@ Examples:
         os.makedirs(output_dir)
     
     # 4. 显示运行信息
-    print(f"RXNRECer v1.3.2 - Enzyme Reaction Prediction")
+    print(f"RXNRECer v1.3.3 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")
