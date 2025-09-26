@@ -36,7 +36,12 @@ setup_scm_example.py
 scripts/version_manager.py
 scripts/update_docs.py
 scripts/release.py
+scripts/sync_versions.py
+scripts/build_and_release.py
 .pypirc
+
+# Claude AI assistant files
+.claude/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -230,7 +235,7 @@ tmp/
 *.old
 *.orig
 
-# Large data files
+# Large data files (but keep essential configs)
 *.h5
 *.hdf5
 *.pkl
@@ -239,7 +244,9 @@ tmp/
 *.parquet
 *.csv
 *.tsv
-*.json
+!data/sample/*.tsv
+!data/sample/*.json
+!results/sample/*.json
 *.xml
 *.fa
 *.faa
@@ -253,6 +260,11 @@ tmp/
 *.sam
 *.vcf
 *.bcf
+
+# Large compressed archives
+*.tar.gz
+*.zip
+*.7z
 
 # Model files
 *.pth
@@ -377,18 +389,26 @@ data/feature_bank/*
 data/rhea/*
 data/rxn_json/*
 data/uniprot/*
+!data/sample/
 results/logs/*
 results/predictions/*
 results/cache/*
 !results/cache/.gitkeep
+!results/sample/
 ckpt/prostt5/*
 ckpt/rxnrecer/*
+!ckpt/README.md
 rxnrecer.egg-info/
 examples/*.tsv
 scripts/*.slurm.out
 scripts/*.lo
+
+# Jupyter notebook files
+*.ipynb
+!examples/*.ipynb
+
+# Development and build related files that users don't need
 __init__.py
 *.sif
-ckpt.tar.gz
-data.tar.gz
-extools.tar.gz
+temp/
+*.bak

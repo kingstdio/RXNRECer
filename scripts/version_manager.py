@@ -21,7 +21,26 @@ VERSION_FILES = [
     "README.md",
     "rxnrecer/cli/predict.py",
     "scripts/build_and_release.py",
-    "docs/RELEASE_NOTES.md"
+    "docs/RELEASE_NOTES.md",
+    "docs/INSTALL.md",
+    "ckpt/README.md",
+    "data/README.md"
+]
+
+# Markdown-specific version patterns
+MD_VERSION_PATTERNS = [
+    # Main version references
+    (r'\*\*RXNRECer v\d+\.\d+\.\d+\*\*', f'**RXNRECer v{{version}}**'),
+    (r'RXNRECer v\d+\.\d+\.\d+', f'RXNRECer v{{version}}'),
+    (r'Version \d+\.\d+\.\d+', f'Version {{version}}'),
+    (r'v\d+\.\d+\.\d+', f'v{{version}}'),
+    
+    # Installation commands
+    (r'pip install rxnrecer==\d+\.\d+\.\d+', f'pip install rxnrecer=={{version}}'),
+    (r'pip install rxnrecer@\d+\.\d+\.\d+', f'pip install rxnrecer@{{version}}'),
+    
+    # PyPI links
+    (r'https://pypi\.org/project/rxnrecer/\d+\.\d+\.\d+/', f'https://pypi.org/project/rxnrecer/{{version}}/'),
 ]
 
 def get_current_version():
@@ -98,6 +117,35 @@ def update_predict_version(new_version):
     
     print(f"✅ Updated predict.py to version {new_version}")
 
+def update_md_file_version(file_path, new_version):
+    """Update version references in a Markdown file"""
+    if not file_path.exists():
+        print(f"⚠️  File not found: {file_path}")
+        return False
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    original_content = content
+    changes_made = False
+    
+    # Apply all MD version patterns
+    for pattern, replacement_template in MD_VERSION_PATTERNS:
+        replacement = replacement_template.format(version=new_version)
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            changes_made = True
+            content = new_content
+    
+    if changes_made:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"✅ Updated {file_path}")
+        return True
+    else:
+        print(f"ℹ️  No changes needed in {file_path}")
+        return False
+
 def update_all_versions(new_version):
     """Update all version references across the project"""
     print(f"🔄 Updating all version references to {new_version}...")
@@ -108,6 +156,12 @@ def update_all_versions(new_version):
     # Update other files
     update_readme_version(new_version)
     update_predict_version(new_version)
+    
+    # Update all Markdown files
+    md_files = [f for f in VERSION_FILES if f.endswith('.md')]
+    for md_file in md_files:
+        file_path = PROJECT_ROOT / md_file
+        update_md_file_version(file_path, new_version)
     
     print(f"✅ All version references updated to {new_version}")
 

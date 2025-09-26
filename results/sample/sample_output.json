@@ -1,0 +1,38 @@
+[
+  {
+    "reaction_id": "RHEA:24076",
+    "prediction_confidence": 0.9999,
+    "reaction_details": {
+      "substrates": ["substrate1", "substrate2"],
+      "products": ["product1", "product2"],
+      "enzyme_class": "EC 1.1.1.1",
+      "reaction_type": "oxidoreductase"
+    },
+    "reaction_rxnrecer_s3": {
+      "reasoning": "Based on protein sequence analysis, this enzyme shows high similarity to known oxidoreductases in the RHEA database. The conserved catalytic residues and domain structure strongly suggest involvement in redox reactions.",
+      "confidence_factors": [
+        "High sequence similarity to known enzymes",
+        "Conserved catalytic residues present",
+        "Domain structure matches oxidoreductase family"
+      ]
+    }
+  },
+  {
+    "reaction_id": "RHEA:14709",
+    "prediction_confidence": 0.9999,
+    "reaction_details": {
+      "substrates": ["substrate3", "substrate4"],
+      "products": ["product3", "product4"],
+      "enzyme_class": "EC 2.7.1.1",
+      "reaction_type": "transferase"
+    },
+    "reaction_rxnrecer_s3": {
+      "reasoning": "The protein sequence contains characteristic motifs and domains typical of transferase enzymes. The predicted active site residues align well with known transferase structures, indicating high confidence in this classification.",
+      "confidence_factors": [
+        "Transferase-specific motifs identified",
+        "Active site residues conserved",
+        "Domain architecture consistent with transferases"
+      ]
+    }
+  }
+]

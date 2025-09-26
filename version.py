@@ -3,8 +3,8 @@ Version information for RXNRECer.
 This file serves as the single source of truth for version numbers.
 """
 
-__version__ = "1.3.0"
-__version_info__ = (1, 3, 0)
+__version__ = "1.3.1"
+__version_info__ = (1, 3, 1)
 
 # Version components
 MAJOR_VERSION = 1
@@ -12,7 +12,7 @@ MINOR_VERSION = 3
 PATCH_VERSION = 0
 
 # Build information
-BUILD_DATE = "2024-09-26"
+BUILD_DATE = "2025-09-26"
 BUILD_COMMIT = "53b5ffe"
 
 # Release information
