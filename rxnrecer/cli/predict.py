@@ -393,7 +393,7 @@ Examples:
     parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='tsv', help='Output format: tsv or json (default: tsv)')
     parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
     parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
-    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.2.0')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.3.3')
     
     # 显示帮助信息
     if len(sys.argv) == 1:
