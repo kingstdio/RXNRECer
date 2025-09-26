@@ -33,12 +33,12 @@ def format_equation_chebi(rheaid,equation, chebiid, chebi_cmp_df):
         return ''
     equation = equation.replace(' carrying a second [4Fe-4S](2+) cluster','').replace('trans,octa-cis','trans-octa-cis')
 
-    equation_array= equation.split(' = ') #拆分反应物产物
-    substrates_array = equation_array[0].split(' + ') # 底物
-    products_array = equation_array[1].split(' + ') # 产物
-    chebiid_array = chebiid.split(';') #拆分chebi_id
+    equation_array= equation.split(' = ') #Split reactants and products
+    substrates_array = equation_array[0].split(' + ') # substrates
+    products_array = equation_array[1].split(' + ') # products
+    chebiid_array = chebiid.split(';') #Split chebi_id
 
-    eq_len = len(substrates_array) + len(products_array) # 方程式中化合物个数
+    eq_len = len(substrates_array) + len(products_array) # Number of compounds in equation
     chebi_len = len(chebiid_array)
 
     # 若化学方程式与chebiid 数量一致则一次展开

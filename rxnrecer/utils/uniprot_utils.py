@@ -4,7 +4,7 @@ Date: 2023-06-21 14:55:14
 LastEditors: Zhenkun Shi kingstdio@gmail.com
 LastEditTime: 2025-07-01 00:00:00
 FilePath: rxnrecer/utils/uniprot_utils.py
-Description: UniProt 实用工具函数（解析快照）
+Description: UniProt utility functions (snapshot parsing)
 
 Copyright (c) 2023 by tibd, All Rights Reserved. 
 '''
@@ -19,18 +19,18 @@ import pandas as pd
 from Bio import SeqIO
 from tqdm import tqdm
 
-# 使用新配置模块
+# Use new config module
 from rxnrecer.config import config as cfg
 
 
 
-#region 从gizp读取数据
+# region Read data from gzip
 def read_file_from_gzip(file_in_path: str, file_out_path: str, extract_type: str, save_file_type: str = 'tsv') -> None:
     """
-    从 UniProt swiss 格式的 gzip 快照解析数据并导出。
+    Parse data from UniProt swiss format gzip snapshot and export.
 
     Args:
-        file_in_path: 输入 gzip 文件路径
+        file_in_path: Input gzip file path
         file_out_path: 输出文件路径（.tsv 或 .feather）
         extract_type: 提取类型，可选 'with_ec' | 'without_ec' | 'full'
         save_file_type: 保存类型，'tsv' 或 'feather'
@@ -68,7 +68,7 @@ def read_file_from_gzip(file_in_path: str, file_out_path: str, extract_type: str
             indata.to_feather(outpath)
     except Exception as e:
         raise RuntimeError(f"Failed to read gzip and export data: {e}")
- #endregion
+ # endregion
 
 #region EC 解析：从描述中拆分 EC 号
 def extract_ec_list(description: str) -> List[str]:
@@ -90,7 +90,7 @@ def extract_ec_list(description: str) -> List[str]:
             if item:
                 ec_list.append(item)
     return ec_list
-#endregion
+# endregion
 
 #region EC 汇总：拼接字符串、判断多功能、统计数量
 def summarize_ec_list(ec_list: List[str]) -> Tuple[str, bool, int]:
@@ -103,7 +103,7 @@ def summarize_ec_list(ec_list: List[str]) -> Tuple[str, bool, int]:
     is_multi = len(ec_list) > 1
     count = len(ec_list)
     return ec_str, is_multi, count
-#endregion
+# endregion
 
 #region EC 特异性层级：计算最具体层级（4 为最具体）
 def compute_ec_specific_level(ec_list: List[str]) -> int:
@@ -119,7 +119,7 @@ def compute_ec_specific_level(ec_list: List[str]) -> int:
         if level > best:
             best = level
     return best
-#endregion
+# endregion
 
 #region 提取单条含有EC号的数据
 def process_record(record, extract_type: str = 'with_ec') -> List:
@@ -177,7 +177,7 @@ def process_record(record, extract_type: str = 'with_ec') -> List:
     except Exception as e:
         # 捕获异常，返回空列表
         return []
-#endregion
+# endregion
 
 def run_exact_task(infile: str, outfile: str) -> None:
     start = time.process_time()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-RXNRECer 数据验证脚本
-用于验证用户下载的数据和模型文件是否完整
+RXNRECer data validation script
+Used to verify if user downloaded data and model files are complete
 """
 
 import os
@@ -11,7 +11,7 @@ from pathlib import Path
 import argparse
 
 def calculate_md5(file_path):
-    """计算文件的MD5哈希值"""
+    """Calculate MD5 hash of file"""
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -19,7 +19,7 @@ def calculate_md5(file_path):
     return hash_md5.hexdigest()
 
 def verify_file(file_path, expected_md5=None):
-    """验证单个文件"""
+    """Verify single file"""
     if not os.path.exists(file_path):
         return False, "File not found"
     
@@ -36,7 +36,7 @@ def verify_file(file_path, expected_md5=None):
     }
 
 def verify_data_structure(data_root):
-    """验证数据目录结构"""
+    """Verify data directory structure"""
     required_files = [
         "rhea/rhea_reactions.feather",
         "dict/dict_id2rxn.json",
@@ -46,7 +46,7 @@ def verify_data_structure(data_root):
         "sample/sample10.fasta"
     ]
     
-    print("🔍 验证数据目录结构...")
+    print("🔍 Verify data directory structure...")
     missing_files = []
     
     for file_path in required_files:
@@ -84,7 +84,7 @@ def main():
     parser = argparse.ArgumentParser(description="RXNRECer数据验证脚本")
     parser.add_argument("--data-root", default="~/.rxnrecer/data", help="数据目录路径")
     parser.add_argument("--ckpt-root", default="~/.rxnrecer/ckpt", help="模型目录路径")
-    parser.add_argument("--manifest", help="数据清单文件路径")
+    parser.add_argument("--manifest", help="数据清单File path")
     
     args = parser.parse_args()
     
@@ -118,30 +118,30 @@ def main():
     
     # 总结
     print("\n" + "=" * 50)
-    print("📊 验证结果总结:")
+    print("📊 Validation result总结:")
     
     if data_valid:
-        print("   ✅ 数据文件验证通过")
+        print("   ✅ 数据文件Validation passed")
     else:
-        print(f"   ❌ 数据文件验证失败，缺失 {len(data_missing)} 个文件")
+        print(f"   ❌ 数据文件Validation failed，缺失 {len(data_missing)} 个文件")
         for file in data_missing:
             print(f"      - {file}")
     
     if model_valid:
-        print("   ✅ 模型文件验证通过")
+        print("   ✅ 模型文件Validation passed")
     else:
-        print(f"   ❌ 模型文件验证失败，缺失 {len(model_missing)} 个文件")
+        print(f"   ❌ 模型文件Validation failed，缺失 {len(model_missing)} 个文件")
         for file in model_missing:
             print(f"      - {file}")
     
     if data_valid and model_valid:
-        print("\n🎉 所有文件验证通过！RXNRECer可以正常使用。")
+        print("\n🎉 所有文件Validation passed！RXNRECer可以正常使用。")
         print("\n💡 下一步:")
         print("   1. 配置LLM API密钥（如果需要S3模式）")
         print("   2. 运行测试: rxnrecer -i ~/.rxnrecer/data/sample/sample10.fasta -o test.tsv -m s1")
         return 0
     else:
-        print("\n❌ 文件验证失败，请检查下载和解压过程。")
+        print("\n❌ 文件Validation failed，请检查下载和解压过程。")
         print("💡 参考 DATA_DOWNLOAD.md 重新下载文件。")
         return 1
 

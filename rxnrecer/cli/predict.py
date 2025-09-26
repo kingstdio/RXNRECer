@@ -1,6 +1,5 @@
-import sys,os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, f'{project_root}/')
+import sys
+import os
 from rxnrecer.config import config as cfg
 import pandas as pd
 import numpy as np
@@ -19,13 +18,13 @@ from rxnrecer.lib.model import mactive as Mactive
 
 def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
     mcfg = SimpleNamespace(
-    #模型参数
+    # Model parameters
     batch_size=1,
     esm_out_dim=1280,
     gru_h_dim=512,
     att_dim=32,
     dropout_rate=0.2,
-    freeze_esm_layers = 32, #冻结层数,
+    freeze_esm_layers = 32, # Number of frozen layers
     output_dimensions=10479,
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     model_weight_path=model_weight_path,
@@ -47,11 +46,11 @@ def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
 
 
 
-#region 1. 加载计算数据
+# region 1. Load computation data
 def load_data(input_data):
     """
-    加载计算数据，支持两种输入格式：
-      1) 传入 FASTA 文件路径 (str) -> 自动解析为 DataFrame
+    Load computation data, supports two input formats:
+      1) Pass FASTA file path (str) -> auto parse to DataFrame
       2) 直接传入 DataFrame -> 内含 'seq' 和 'uniprot_id' 列
     """
     if isinstance(input_data, str):
@@ -70,19 +69,9 @@ def load_data(input_data):
         raise ValueError("Input DataFrame must contain column 'uniprot_id'.")
     
     return input_df
-#endregion 
+# endregion 
 
 
-def format_obj(x, ndigits=6):
-    """递归处理单元格内容，保留浮点数到指定小数位"""
-    if isinstance(x, (np.floating, float)):
-        return round(float(x), ndigits)
-    elif isinstance(x, dict):
-        return {k: format_obj(v, ndigits) for k, v in x.items()}
-    elif isinstance(x, (list, tuple)):
-        return [format_obj(v, ndigits) for v in x]
-    else:
-        return x
 
 
 #region 2. 保存计算结果
@@ -93,14 +82,16 @@ def save_data(resdf, output_file, output_format='tsv'):
     output_file: 输出文件路径
     output_format: 'tsv' 或 'json'
     """
-    resdf = resdf.applymap(lambda x: format_obj(x, 4))
+    resdf = resdf.applymap(lambda x: butils.format_obj(x, 4))
     if output_format == 'tsv':
+        resdf[["reaction_ec", "reaction_equation", "reaction_equation_ref_chebi"]] = resdf['rxn_details'].apply(butils.simplify_rxn_details_fields).apply(pd.Series)
+        resdf = resdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob', 'reaction_ec', 'reaction_equation', 'reaction_equation_ref_chebi']]
         resdf.to_csv(output_file, index=False, sep='\t', float_format="%.4f")
     elif output_format == 'json':
         resdf.to_json(output_file, orient='records', indent=4)
     else:
         print(f'Error: Invalid output format {output_format}. Skip saving.')
-#endregion 
+# endregion 
 
 
 
@@ -209,7 +200,7 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         
         return res_df_s3
         
-#endregion
+# endregion
 
 #region 集成时处理酶和非酶混合情况
 def res_refinement(rxn_prob):
@@ -233,12 +224,12 @@ def res_refinement(rxn_prob):
         rxn_prob.pop('-')
 
     return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
-#endregion
+# endregion
 
 
 def get_ensemble(input_df, rxnrecer_df):
     """
-    融合多个方法对蛋白进行反应预测，生成集成预测结果，并处理酶/非酶混合情况。
+    融合多个方法对蛋白Perform reaction prediction，生成集成预测结果，并处理酶/非酶混合情况。
 
     输入参数：
     - input_df: 待预测的蛋白信息（DataFrame），需包含 'uniprot_id' 列

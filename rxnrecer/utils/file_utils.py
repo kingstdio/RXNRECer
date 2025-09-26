@@ -1,9 +1,8 @@
 """
 File utility functions for RXNRECer
 """
-import sys,os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, f'{project_root}/')
+import sys
+import os
 import hashlib
 import json
 import shutil
@@ -12,72 +11,71 @@ import pandas as pd
 from pathlib import Path
 from typing import  Dict,  Any
 from Bio import SeqIO
-import hashlib
 from rxnrecer.config import config as cfg
 
 def get_project_root() -> Path:
     """
-    获取项目根目录，优先使用环境变量，否则智能查找
+    Get project root directory, prioritize environment variables, otherwise use smart lookup
     
     Returns:
-        Path: 项目根目录路径
+        Path: Project root directory path
         
     Note:
-        优先检查环境变量RXNRECER_PROJECT_ROOT，如果没有设置，
-        则智能查找包含data/和ckpt/目录的父目录
+        Prioritize checking environment variable RXNRECER_PROJECT_ROOT, if not set,
+        then use smart lookup for parent directory containing data/ and ckpt/ directories
     """
-    # 优先使用环境变量
+    # Prioritize environment variables
     env_root = os.environ.get('RXNRECER_PROJECT_ROOT')
     if env_root:
         env_path = Path(env_root)
         if (env_path / 'data').exists() and (env_path / 'ckpt').exists():
             return env_path
         else:
-            print(f"⚠️  警告: 环境变量RXNRECER_PROJECT_ROOT指定的路径 {env_root} 不包含必要的data和ckpt目录")
+            print(f"⚠️  Warning: Path specified by environment variable RXNRECER_PROJECT_ROOT {env_root} does not contain required data and ckpt directories")
     
-    # 智能查找项目根目录
-    # 从当前工作目录开始，向上查找包含data和ckpt的目录
+    # Smart lookup for project root directory
+    # Start from current working directory and search upward for directory containing data and ckpt
     current_dir = Path.cwd()
     
-    # 检查当前目录
+    # Check current directory
     if (current_dir / 'data').exists() and (current_dir / 'ckpt').exists():
         return current_dir
     
-    # 向上查找父目录
+    # Search upward through parent directories
     for parent in current_dir.parents:
         if (parent / 'data').exists() and (parent / 'ckpt').exists():
             return parent
     
-    # 如果都找不到，尝试查找脚本文件所在目录
+    # If none found, try script file directory
     script_dir = Path(__file__).parent.parent.parent
     if (script_dir / 'data').exists() and (script_dir / 'ckpt').exists():
         return script_dir
     
-    # 最后尝试脚本目录的父目录
+    # Finally try script directory parent
     script_parent = script_dir.parent
     if (script_parent / 'data').exists() and (script_parent / 'ckpt').exists():
         return script_parent
     
-    # 如果都找不到，使用当前目录并给出警告
-    print(f"⚠️  警告: 无法找到包含data和ckpt目录的项目根目录")
-    print(f"   当前工作目录: {current_dir}")
-    print(f"   脚本目录: {script_dir}")
-    print(f"   请确保在正确的项目目录下运行，或设置RXNRECER_PROJECT_ROOT环境变量")
+    # If none found, use current directory with warning
+    print(f"⚠️  Warning: Unable to find project root directory containing data and ckpt directoriesProject root directory")
+    print(f"   Current working directory: {current_dir}")
+    print(f"   Script directory: {script_dir}")
+    print(f"   Please ensure running in correct project directory, or set RXNRECER_PROJECT_ROOT environment variable")
     return current_dir
 
 
 def get_data_root() -> str:
-    """获取数据目录路径"""
+    """Get data directory path"""
     return str(get_project_root() / 'data')
 
 
 def get_ckpt_root() -> str:
-    """获取模型检查点目录路径"""
+    """Get model checkpoint directory path"""
     return str(get_project_root() / 'ckpt')
 
 
 def get_results_root() -> str:
-    """获取结果输出目录路径"""
+    """Get results output directory path"""
     return str(get_project_root() / 'results')
 
 
@@ -263,7 +261,6 @@ def get_dataframe_hash(df: pd.DataFrame) -> str:
     Returns:
         MD5 hash string
     """
-    import hashlib
     
     df_str = df.to_string(index=False, header=True)
     return hashlib.md5(df_str.encode('utf-8')).hexdigest()
@@ -337,11 +334,11 @@ def downlod(
 
 #region DataFrame表格转fasta文件
 def table2fasta(table, file_out):
-    """DataFrame表格转fasta文件, 输入两列，【序列名称，序列】
+    """Convert DataFrame to FASTA file, input two columns: [sequence name, sequence]
 
     Args:
-        table (DataFrame): 包含序列名称、序列的DataFame
-        file_out (_type_): 输出fasta文件路径
+        table (DataFrame): DataFrame containing sequence names and sequences
+        file_out (_type_): Output FASTA file path
     """
     file = open(file_out, 'w')
     for index, row in table.iterrows():
@@ -374,11 +371,11 @@ def read_json_as_object(file_path: str) -> object:
 
 
 def get_cache_filename(input_file, mode, output_format):
-    """生成缓存文件名，基于输入文件内容、模式和输出格式的hash"""
+    """Generate cache filename based on hash of input file content, mode and output format"""
     try:
         with open(input_file, 'rb') as f:
             file_content = f.read()
-        # 使用文件内容、模式和输出格式生成hash
+        # Generate hash using file content, mode and output format
         content_hash = hashlib.md5(f'{file_content}_{mode}_{output_format}'.encode()).hexdigest()
         return f"cache_{content_hash}"
     except Exception as e:
@@ -387,12 +384,12 @@ def get_cache_filename(input_file, mode, output_format):
 
 
 def check_cache(cache_filename):
-    """检查缓存是否存在，如果存在则返回缓存文件路径"""
+    """Check if cache exists, return cache file path if exists"""
     
     cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
-    # 创建缓存目录
+    # Create cache directory
     
-    # 检查缓存文件是否存在
+    # Check cacheCheck if file exists
     if os.path.exists(cache_file):
         print(f"📋 Found cached results: {cache_filename}")
         return True
@@ -404,7 +401,7 @@ def check_cache(cache_filename):
 
 
 def save_to_cache(cache_data,cache_filename):
-    """保存结果到缓存"""
+    """Save results to cache"""
     try:
         cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
         cache_data.to_pickle(cache_file)
@@ -412,7 +409,7 @@ def save_to_cache(cache_data,cache_filename):
         print(f"Warning: Failed to cache results: {e}")
         
 def load_from_cache(cache_filename):
-    """从缓存加载结果"""
+    """Load results from cache"""
     try:
         cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
         return pd.read_pickle(cache_file)
@@ -423,20 +420,20 @@ def load_from_cache(cache_filename):
 
 def clear_cache(cache_filename=None, older_than_days=None):
     """
-    清理缓存文件
+    Clean cache files
     
     Args:
-        cache_filename (str, optional): 指定要删除的缓存文件
-        older_than_days (int, optional): 删除指定天数前的缓存文件
+        cache_filename (str, optional): Specify cache file to delete
+        older_than_days (int, optional): Delete cache files older than specified days
     
     Returns:
-        int: 删除的文件数量
+        int: Number of deleted files
     """
     try:
         deleted_count = 0
         
         if cache_filename:
-            # 删除指定文件
+            # Delete specified file
             cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
             if os.path.exists(cache_file):
                 os.remove(cache_file)
@@ -445,7 +442,7 @@ def clear_cache(cache_filename=None, older_than_days=None):
             else:
                 print(f"Warning: Cache file not found: {cache_filename}")
         elif older_than_days:
-            # 删除指定天数前的文件
+            # Delete files older than specified days
             import time
             current_time = time.time()
             cutoff_time = current_time - (older_than_days * 24 * 3600)
@@ -458,7 +455,7 @@ def clear_cache(cache_filename=None, older_than_days=None):
                         deleted_count += 1
                         print(f"🗑️  Deleted old cache file: {filename}")
         else:
-            # 删除所有缓存文件
+            # Delete all cache files
             for filename in os.listdir(cfg.CACHE_DIR):
                 if filename.endswith('.pkl'):
                     file_path = os.path.join(cfg.CACHE_DIR, filename)
@@ -483,10 +480,10 @@ def clear_cache(cache_filename=None, older_than_days=None):
 
 def get_cache_info():
     """
-    获取缓存信息
+    Get cache information
     
     Returns:
-        dict: 包含缓存统计信息的字典
+        dict: Dictionary containing cache statistics
     """
     try:
         if not os.path.exists(cfg.CACHE_DIR):
@@ -520,7 +517,7 @@ def get_cache_info():
             total_size += file_size
             file_times.append((filename, file_time))
         
-        # 按时间排序
+        # Sort by time
         file_times.sort(key=lambda x: x[1])
         
         return {

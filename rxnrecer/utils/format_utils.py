@@ -6,13 +6,13 @@ def format_rxn_output(RXNRECer_with_prob: Dict[str, float],
                           RXNRECER_S3: List[Dict[str, Any]] = None,
                           mode: str = 's3') -> List[Dict[str, Any]]:
     """
-    格式化反应输出，统一反应数据结构
+    Format reaction output, unify reaction data structure
     
     Args:
-        RXNRECer_with_prob: 包含反应ID和置信度的字典
-        RXN_details: 反应详情列表
-        RXNRECER_S3: S3预测结果列表（可选，仅S3模式需要）
-        mode: 模式选择，'s2' 或 's3'
+        RXNRECer_with_prob: Dictionary containing reaction ID and confidence
+        RXN_details: Reaction details list
+        RXNRECER_S3: S3 prediction results list (optional, only required for S3 mode)
+        mode: Mode selection，'s2' 或 's3'
     
     Returns:
         反应字典列表

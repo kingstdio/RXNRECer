@@ -385,3 +385,4 @@ examples/*.tsv
 scripts/*.slurm.out
 scripts/*.lo
 __init__.py
+*.sif

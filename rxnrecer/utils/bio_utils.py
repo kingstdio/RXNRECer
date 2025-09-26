@@ -2,9 +2,8 @@
 Biological utility functions for RXNRECer
 """
 
-import sys,os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, f'{project_root}/../')
+import sys
+import os
 from rxnrecer.config import config as cfg
 from rxnrecer.utils import file_utils as ftool
 import re
@@ -290,26 +289,25 @@ def clean_sequence(sequence: str) -> str:
     valid_aa = set('ACDEFGHIKLMNPQRSTVWY')
     return ''.join(aa for aa in sequence.upper() if aa in valid_aa)
 
-#region 根据反应ID获取反应详细信息
 def get_rxn_detail(rxn_id, rxn_bank):
     """
-    根据反应ID获取单个反应的详细信息，返回Reaction对象
-    
+    Get detailed reaction information by reaction ID, returns Reaction object
+
     Args:
-        rxn_id (str): 反应ID字符串，如 'RHEA:12345'
-        rxn_bank (pd.DataFrame): 反应数据库DataFrame，需包含列：
-            - reaction_id: 反应ID
-            - equation: 反应方程式
-            - equation_chebi: ChEBI格式的反应方程式
-            - equation_smiles: SMILES格式的反应方程式
-            - ec_number: 酶委员会编号
-        
+        rxn_id (str): Reaction ID string, e.g., 'RHEA:12345'
+        rxn_bank (pd.DataFrame): Reaction database DataFrame, should contain columns:
+            - reaction_id: Reaction ID
+            - equation: Reaction equation
+            - equation_chebi: ChEBI format reaction equation
+            - equation_smiles: SMILES format reaction equation
+            - ec_number: EC number
+
     Returns:
-        Reaction: Reaction对象，包含完整的反应信息
-            如果反应ID无效或不存在，返回None
-            
+        Reaction: Reaction object containing complete reaction information
+            Returns None if reaction ID is invalid or not found
+
     Note:
-        使用Reaction对象可以统一接口，方便后续处理
+        Using Reaction object provides unified interface for subsequent processing
     """
     from rxnrecer.lib.rxn.Reaction import Reaction
     
@@ -323,7 +321,7 @@ def get_rxn_detail(rxn_id, rxn_bank):
     row = match.iloc[0]
     
     try:
-        # 创建Reaction对象
+        # Create Reaction object
         reaction = Reaction(
             rxn_smiles=row.equation_smiles,
             rxn_equation=row.equation,
@@ -333,99 +331,98 @@ def get_rxn_detail(rxn_id, rxn_bank):
         )
         return reaction
     except Exception as e:
-        print(f"警告: 无法创建反应对象 {rxn_id}: {e}")
+        print(f"Warning: Unable to create reaction object {rxn_id}: {e}")
         return None
-#endregion
 
 def get_rxn_details_from_rxn_json(rxn_ids):
     """
-    从JSON文件获取反应详情，支持多个分隔符和异常处理
-    
+    Get reaction details from JSON files with support for multiple separators and exception handling
+
     Args:
-        rxn_ids (str): 反应ID字符串，支持多种分隔符（; | ,）
-            例如: 'RHEA:14709;RHEA:24076;RHEA:32187' 或 'RHEA:14709|RHEA:24076'
-        
+        rxn_ids (str): Reaction ID string supporting multiple separators (; | ,)
+            e.g., 'RHEA:14709;RHEA:24076;RHEA:32187' or 'RHEA:14709|RHEA:24076'
+
     Returns:
-        pd.DataFrame: 包含反应详情的DataFrame，如果出错返回空DataFrame
-        
+        pd.DataFrame: DataFrame containing reaction details, returns empty DataFrame if error occurs
+
     Note:
-        自动处理多种分隔符，支持 ; | , 等分隔符
-        对找不到的JSON文件进行异常处理，跳过无效文件
+        Automatically handles multiple separators including ; | , etc.
+        Exception handling for missing JSON files, skips invalid files
     """
     import pandas as pd
     
     if not rxn_ids or rxn_ids == '-':
         return pd.DataFrame()
     
-    # 处理多种分隔符，支持 ; | , 等
+    # Handle multiple separators including ; | , etc.
     separators = [';', '|', ',', cfg.SPLITER]
     rxn_id_array = []
     
-    # 尝试不同的分隔符分割
+    # Try different separators for splitting
     for sep in separators:
         if sep in rxn_ids:
             rxn_id_array = [rxn_id.strip() for rxn_id in rxn_ids.split(sep) if rxn_id.strip()]
             break
     
-    # 如果没有找到分隔符，当作单个ID处理
+    # If no separator found, treat as single ID
     if not rxn_id_array:
         rxn_id_array = [rxn_ids.strip()]
     
-    rxn_list = []  # 用于存储每个JSON数据
+    rxn_list = []  # Store JSON data for each reaction
     
     for rxn_id in rxn_id_array:
         try:
-            # 处理RHEA:格式的ID，转换为文件名格式
+            # Handle RHEA: format ID, convert to filename format
             if ':' in rxn_id:
                 file_id = rxn_id.replace(":", "_")
             else:
                 file_id = rxn_id
             
-            # 构建文件路径
+            # Build file path
             file_path = f"{cfg.DIR_RXN_JSON}{file_id}.json"
             
-            # 检查文件是否存在
+            # Check if file exists
             if not os.path.exists(file_path):
-                print(f"警告: 找不到反应文件 {file_path}")
+                print(f"Warning: Reaction file not found {file_path}")
                 continue
             
-            # 读取JSON文件
+            # Read JSON file
             item = ftool.read_json_file(file_path)
-            if item:  # 确保读取成功
+            if item:  # Ensure successful reading
                 rxn_list.append(item)
             else:
-                print(f"警告: 无法读取反应文件 {file_path}")
+                print(f"Warning: Unable to read reaction file {file_path}")
                 
         except Exception as e:
-            print(f"警告: 处理反应ID {rxn_id} 时出错: {e}")
+            print(f"Warning: Error processing reaction ID {rxn_id} : {e}")
             continue
     
-    # 如果没有成功读取任何文件，返回空DataFrame
+    # If no files were successfully read, return empty DataFrame
     if not rxn_list:
-        print(f"警告: 没有成功读取任何反应文件")
+        print(f"Warning: No reaction files were successfully read")
         return pd.DataFrame()
     
     try:
-        # 使用pandas json_normalize处理数据
+        # Use pandas json_normalize to process data
         res = pd.json_normalize(rxn_list)
         return res
     except Exception as e:
-        print(f"警告: 数据标准化失败: {e}")
+        print(f"Warning: Data normalization failed: {e}")
         return pd.DataFrame()
 
 
 def get_rxn_details_list(rxn_string, rxn_bank, spliter=cfg.SPLITER):
     """
-    解析包含多个反应ID的字符串，返回每个反应的详细信息列表
+    Parse string containing multiple reaction IDs, returns detailed information list for each reaction
     
     Args:
-        rxn_string (str): 反应字符串，可能包含多个反应ID，用分隔符分隔
-            例如: 'RHEA:12345|RHEA:67890' 或 'RHEA:12345'
-        rxn_bank (pd.DataFrame): 反应数据库DataFrame
-        spliter (str, optional): 分隔符，默认为配置文件中的SPLITER
+        rxn_string (str): Reaction string, may contain multiple reaction IDs separated by delimiter
+            e.g., 'RHEA:12345|RHEA:67890' or 'RHEA:12345'
+        rxn_bank (pd.DataFrame): Reaction database DataFrame
+        spliter (str, optional): Delimiter, defaults to SPLITER from config file
         
     Returns:
-        list: Reaction对象的列表，每个对象包含完整的反应信息
+        list: List of Reaction objects, each object contains complete reaction information
         
     Examples:
         >>> get_rxn_details_list('RHEA:12345|RHEA:67890', rxn_bank, '|')
@@ -434,44 +431,44 @@ def get_rxn_details_list(rxn_string, rxn_bank, spliter=cfg.SPLITER):
         >>> get_rxn_details_list('-', rxn_bank)
         []
     """
-    # 处理空值或无反应的情况
+    # Handle empty values or no reaction cases
     if not rxn_string or rxn_string == '-':
         return []
     else:
-        # 按分隔符分割反应ID字符串
+        # Split reaction ID string by delimiter
         rxn_ids = [rxn_id.strip() for rxn_id in rxn_string.split(spliter) if rxn_id.strip()]
-        # 获取每个反应ID的详细信息，过滤掉None值
+        # Get detailed information for each reaction ID, filter out None values
         RXN_details = [get_rxn_detail(rxn_id, rxn_bank) for rxn_id in rxn_ids]
-        # 过滤掉None值，只返回有效的Reaction对象
+        # Filter out None values, only return valid Reaction objects
         return [rxn for rxn in RXN_details if rxn is not None] 
 
 
 def get_rxn_details_batch(df_rxns, rxn_bank, rxn_id_column='RXNRECer', spliter=cfg.SPLITER):
     """
-    批量处理DataFrame中的反应数据，为每行添加反应详情信息
+    Batch process reaction data in DataFrame, add reaction details for each row
     
     Args:
-        df_rxns (pd.DataFrame): 包含反应数据的DataFrame
-        rxn_bank (pd.DataFrame): 反应数据库DataFrame
-        rxn_id_column (str, optional): 反应ID列名，默认为'RXNRECer'
-        spliter (str, optional): 分隔符，默认为配置文件中的SPLITER
+        df_rxns (pd.DataFrame): DataFrame containing reaction data
+        rxn_bank (pd.DataFrame): Reaction database DataFrame
+        rxn_id_column (str, optional): Reaction ID column name, defaults to'RXNRECer'
+        spliter (str, optional): Delimiter, defaults to SPLITER from config file
         
     Returns:
-        pd.DataFrame: 扩展后的DataFrame，新增列：
-            - RXN_details: 包含该行所有Reaction对象的列表
+        pd.DataFrame: Expanded DataFrame with new column:
+            - RXN_details: List containing all Reaction objects for that row
             
     Examples:
         >>> df = pd.DataFrame({'RXNRECer': ['RHEA:12345', 'RHEA:67890|RHEA:11111']})
         >>> result = get_rxn_details_batch(df, rxn_bank)
-        >>> result['RXN_details'][0]  # 第一行的反应详情
+        >>> result['RXN_details'][0]  # Reaction details for first row
         [<Reaction object>]
-        >>> result['RXN_details'][1]  # 第二行的反应详情（包含2个反应）
+        >>> result['RXN_details'][1]  # Reaction details for second row (contains 2 reactions)
         [<Reaction object>, <Reaction object>]
         
     Note:
-        此函数会为每行创建一个RXN_details列，包含该行所有Reaction对象的列表
-        如果某行包含多个反应ID（用分隔符分隔），会返回包含多个Reaction对象的列表
-        无效的反应ID会被过滤掉，不会出现在结果中
+        此函数会为每行创建一个RXN_details列，List containing all Reaction objects for that row
+        If a row contains multiple reaction IDs (separated by delimiter), returns list containing multiple Reaction objects
+        Invalid reaction IDs will be filtered out and will not appear in results
     """
     
     # Create a copy to avoid modifying original
@@ -486,14 +483,14 @@ def get_rxn_details_batch(df_rxns, rxn_bank, rxn_id_column='RXNRECer', spliter=c
 
 def merge_reaction_with_s3_info(RXN_details, s3_info):
     """
-    将S3信息补充回每个反应中，生成便于前端解析的JSON数据
+    Supplement S3 information back to each reaction, generate JSON data for frontend parsing
     
     Args:
-        RXN_details (list): 反应详情列表，每个元素是Reaction对象
-        s3_info (list): S3信息列表，每个元素包含reaction_id, selected, rank, confidence, reason
+        RXN_details (list): Reaction details list, each element is a Reaction object
+        s3_info (list): S3 information list, each element contains reaction_id, selected, rank, confidence, reason
         
     Returns:
-        list: 合并后的反应信息列表，每个元素是包含S3信息的字典
+        list: Merged reaction information list, each element is a dictionary containing S3 information
         
     Examples:
         >>> RXN_details = [reaction_obj1, reaction_obj2, reaction_obj3]
@@ -503,12 +500,12 @@ def merge_reaction_with_s3_info(RXN_details, s3_info):
         ...     {'reaction_id': 'RHEA:32187', 'selected': 'no', 'confidence': 0.1, 'reason': '...'}
         ... ]
         >>> merged = merge_reaction_with_s3_info(RXN_details, s3_info)
-        >>> # 结果包含完整的反应信息和S3评分信息
+        >>> # Result contains complete reaction information and S3 scoring information
     """
     if not RXN_details or not s3_info:
         return []
     
-    # 创建S3信息的查找字典，以reaction_id为key
+    # Create S3 information lookup dictionary with reaction_id as key
     s3_lookup = {}
     for s3_item in s3_info:
         if 'reaction_id' in s3_item:
@@ -520,24 +517,24 @@ def merge_reaction_with_s3_info(RXN_details, s3_info):
         if reaction is None:
             continue
             
-        # 获取反应的基本信息
+        # Get basic reaction information
         reaction_dict = reaction.to_dict()
         
-        # 查找对应的S3信息
+        # Find corresponding S3 information
         s3_data = s3_lookup.get(reaction.reaction_id, {})
         
-        # 合并信息
+        # Merge information
         enriched_reaction = {
-            # 反应基本信息
+            # Basic reaction information
             **reaction_dict,
             
-            # S3评分信息
+            # S3 scoring information
             's3_selected': s3_data.get('selected', 'no'),
             's3_rank': s3_data.get('rank', None),
             's3_confidence': s3_data.get('confidence', 0.0),
             's3_reason': s3_data.get('reason', ''),
             
-            # 前端友好的字段
+            # Frontend-friendly fields
             'is_selected': s3_data.get('selected', 'no') == 'yes',
             'selection_rank': s3_data.get('rank', None),
             'confidence_score': s3_data.get('confidence', 0.0),
@@ -551,21 +548,21 @@ def merge_reaction_with_s3_info(RXN_details, s3_info):
 
 def create_frontend_friendly_json(RXN_details, s3_info, output_file=None):
     """
-    创建前端友好的JSON文件，包含完整的反应信息和S3评分
+    Create frontend-friendly JSON file containing complete reaction information and S3 scoring
     
     Args:
-        RXN_details (list): 反应详情列表
-        s3_info (list): S3信息列表
-        output_file (str, optional): 输出文件路径，如果为None则返回字典
+        RXN_details (list): Reaction details list
+        s3_info (list): S3 information list
+        output_file (str, optional): Output file path, returns dictionary if None
         
     Returns:
-        dict or None: 如果output_file为None返回字典，否则返回None（写入文件）
+        dict or None: Returns dictionary if output_file is None, otherwise returns None (writes to file)
         
     Examples:
-        >>> # 生成JSON文件
+        >>> # Generate JSON file
         >>> create_frontend_friendly_json(RXN_details, s3_info, 'output.json')
         
-        >>> # 返回字典数据
+        >>> # Return dictionary data
         >>> data = create_frontend_friendly_json(RXN_details, s3_info)
         >>> print(json.dumps(data, indent=2))
     """
@@ -573,7 +570,7 @@ def create_frontend_friendly_json(RXN_details, s3_info, output_file=None):
     
     merged_data = merge_reaction_with_s3_info(RXN_details, s3_info)
     
-    # 创建前端友好的数据结构
+    # Create frontend-friendly data structure
     frontend_data = {
         'reactions': merged_data,
         'summary': {
@@ -585,10 +582,46 @@ def create_frontend_friendly_json(RXN_details, s3_info, output_file=None):
     }
     
     if output_file:
-        # 写入文件
+        # Write to file
         ftool.write_json_file(frontend_data, output_file)
-        print(f"✅ 前端友好JSON文件已生成: {output_file}")
+        print(f"✅ Frontend-friendly JSON file generated: {output_file}")
         return None
     else:
-        # 返回字典数据
+        # Return dictionary data
         return frontend_data
+
+def format_obj(x, ndigits=6):
+    """递归处理单元格内容，保留浮点数到指定小数位"""
+    if isinstance(x, (np.floating, float)):
+        return round(float(x), ndigits)
+    elif isinstance(x, dict):
+        return {k: format_obj(v, ndigits) for k, v in x.items()}
+    elif isinstance(x, (list, tuple)):
+        return [format_obj(v, ndigits) for v in x]
+    else:
+        return x
+    
+    
+def simplify_rxn_details_fields(rxn_details_list):
+    
+    reaction_ec =[]
+    reaction_equation = []
+    reaction_equation_ref_chebi = []
+    
+    for item in rxn_details_list:
+        rxn_id = item['reaction_id']
+        
+        if rxn_id == '-':
+            rxn_ec = '-'
+            rxn_equ = '-'
+            rxn_equ_ref_chebi = '-'
+        else:
+            rxn_ec = item['reaction_details']['reaction_ec']
+            rxn_equ = item['reaction_details']['reaction_equation']
+            rxn_equ_ref_chebi = item['reaction_details']['reaction_equation_ref_chebi']
+            
+        reaction_ec.append(rxn_ec)
+        reaction_equation.append(rxn_equ)
+        reaction_equation_ref_chebi.append(rxn_equ_ref_chebi)
+    
+    return reaction_ec, reaction_equation, reaction_equation_ref_chebi

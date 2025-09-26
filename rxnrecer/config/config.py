@@ -4,7 +4,7 @@ Date: 2022-04-08 15:57:16
 LastEditors: Zhenkun Shi kingstdio@gmail.com
 LastEditTime: 2025-01-28
 FilePath: /preaction/config/conf.py
-Description: RXNRECer配置文件 - 清理版本
+Description: RXNRECer configuration file - cleaned version
 
 Copyright (c) 2022 by tibd, All Rights Reserved. 
 '''
@@ -13,16 +13,16 @@ from rxnrecer.utils import file_utils
 
 CODE_MODE = 'PRODUCTION'
 # CODE_MODE = 'DEBUG'
-# 缓存配置
+# Cache configuration
 CACHE_ENABLED = True
 
-# 工程路径
+# Project path
 DIR_PROJECT_ROOT = str(file_utils.get_project_root())
 
-# 数据目录
+# Data directories
 DATA_ROOT = DIR_PROJECT_ROOT + '/data/'
 
-# 缓存目录
+# Cache directory
 CACHE_DIR = DIR_PROJECT_ROOT + '/results/cache/'
 
 # 临时目录
@@ -31,13 +31,13 @@ TEMP_DIR = DIR_PROJECT_ROOT + '/temp/'
 # 示例文件路径
 SAMPLE_DIR = DATA_ROOT + 'sample/'
 
-# 模型目录
+# Model directory
 CKPT_PROSTT5 = DIR_PROJECT_ROOT + '/ckpt/prostt5'
 
-# 生产环境模型文件
+# 生产环境Model files
 FILE_MOLEL_PRODUCTION_BEST_MODEL = DIR_PROJECT_ROOT + '/ckpt/rxnrecer/production_185846best.pth'
 
-# 分隔符
+# Separator
 SPLITER = ';'
 
 # 核心数据文件
@@ -68,7 +68,7 @@ DIR_CPD_SVG = DATA_ROOT + 'cpd_svg/'
 # 数据集目录
 DIR_DATASET = DATA_ROOT + 'datasets/task240524/'
 
-# 结果目录
+# Results directory
 RESULTS_DIR = DIR_PROJECT_ROOT + '/results/'
 
 # LLM API配置

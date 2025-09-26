@@ -14,13 +14,15 @@ from rxnrecer.lib.smi import  simi_caculator as simitool
 
 
 def getmsa(df_test, k=1):
+    
+    print('Running MSA ...')
     with tempfile.NamedTemporaryFile(delete=True, suffix='.fasta') as fasta_test, \
          tempfile.NamedTemporaryFile(delete=True, suffix='.tsv') as res_blast:
 
         # 生成 FASTA 文件
         ftool.table2fasta(df_test, fasta_test.name)
         # 构造 Diamond 命令
-        cmd = ["diamond", "blastp",  "-d", cfg.FILE_DS_DMND, "-q", fasta_test.name, "-o", res_blast.name, "-b5", "-c1", "-k", str(k), "--quiet"]
+        cmd = [f"{cfg.DIR_PROJECT_ROOT}/extools/msa/diamond", "blastp",  "-d", cfg.FILE_DS_DMND, "-q", fasta_test.name, "-o", res_blast.name, "-b5", "-c1", "-k", str(k), "--quiet"]
 
         # 运行 Diamond
         subprocess.run(cmd, check=True)
@@ -42,6 +44,8 @@ def getmsa(df_test, k=1):
     return blast_res  
 
 def getcatfam(df_test):
+    
+    print('Running CatFam ...')
     with tempfile.NamedTemporaryFile(delete=False, suffix='.fasta') as fasta_test, \
          tempfile.NamedTemporaryFile(delete=False, suffix='.tsv') as res_catfam:
         
@@ -50,7 +54,7 @@ def getcatfam(df_test):
         
         # 构造 CatFam 命令
         cmd = [
-            "singularity", "exec", "/hpcfs/fpublic/container/singularity/app/catfam/catfam.sif",
+            "singularity", "exec", f"{cfg.DIR_PROJECT_ROOT}/extools/ec/catfam.sif",
             "/catfam/source/catsearch.pl",
             "-d", "/catfam/CatFamDB/CatFam_v2.0/CatFam4D99R",
             "-i", fasta_test.name,
@@ -77,6 +81,8 @@ def getcatfam(df_test):
 
 
 def getecrecer(df_test):
+    
+    print('Running ECRECer ...')
     with tempfile.NamedTemporaryFile(delete=False, suffix='.fasta') as fasta_test, \
          tempfile.NamedTemporaryFile(delete=False, suffix='.tsv') as res_ecrecer:
         
@@ -85,7 +91,7 @@ def getecrecer(df_test):
         
         # 构造 ECRECer 命令
         cmd = [
-            "singularity", "exec", "--nv", "/hpcfs/fpublic/container/singularity/app/ecrecer/ecrecer.sif",
+            "singularity", "exec", "--nv", f"{cfg.DIR_PROJECT_ROOT}/extools/ec/ecrecer.sif",
             "python", "/ecrecer/production.py",
             "-i", fasta_test.name,  # 使用生成的 FASTA 文件
             "-o", res_ecrecer.name,  # 结果写入临时 TSV 文件
@@ -139,6 +145,7 @@ def get_top_protein_simi(x_feature, y_feature, y_uniprot_id, dict_featureBank,di
 
 def getT5(df_test, topk=3):
     
+    print('Running T5 ...')
     featureBank = pd.read_feather(cfg.FILE_PRODUCTION_FEATURES)
     dict_featureBank = pd.Series( featureBank['uniprot_id'], featureBank.index.values).to_dict()
     
