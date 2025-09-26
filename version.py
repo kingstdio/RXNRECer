@@ -3,8 +3,8 @@ Version information for RXNRECer.
 This file serves as the single source of truth for version numbers.
 """
 
-__version__ = "1.3.3"
-__version_info__ = (1, 3, 3)
+__version__ = "1.3.4"
+__version_info__ = (1, 3, 4)
 
 # Version components
 MAJOR_VERSION = 1
