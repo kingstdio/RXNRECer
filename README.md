@@ -153,48 +153,58 @@ rxnrecer-download-data --force
 ## 📁 Project Structure
 
 ```
-RXNRECer/                    # Project root
-├── rxnrecer/               # Main Python package
-│   ├── cli/                # Command-line interface
-│   ├── config/             # Configuration
-│   ├── lib/                # Core libraries
-│   │   ├── datasource/     # Data source handling
-│   │   ├── embedding/      # Protein embeddings
-│   │   ├── llm/            # Language model integration
-│   │   ├── ml/             # Machine learning utilities
-│   │   ├── model/          # Model architectures
-│   │   ├── rxn/            # Reaction processing
-│   │   └── smi/            # SMILES handling
-│   ├── models/             # Neural network models
-│   └── utils/              # Utility functions
+RXNRECer/                               # Project root (release)
+├── .github/                            # CI/CD workflows
+│   └── workflows/
+├── rxnrecer/                           # Main Python package
+│   ├── cli/                            # Command-line interface
+│   ├── config/                         # Configuration
+│   ├── lib/                            # Core libraries
+│   │   ├── datasource/                 # Data source handling
+│   │   ├── embedding/                  # Protein embeddings
+│   │   ├── evaluation/                 # Evaluation helpers
+│   │   ├── llm/                        # Language model integration
+│   │   ├── ml/                         # Machine learning utilities
+│   │   ├── model/                      # Model architectures
+│   │   ├── rxn/                        # Reaction processing
+│   │   └── smi/                        # SMILES handling
+│   ├── models/                         # Model wrappers
+│   └── utils/                          # Utility functions
 │
-├── data/                    # Data files (download required)
-│   ├── chebi/              # ChEBI database
-│   ├── cpd_svg/            # Compound SVG files
-│   ├── datasets/            # Training datasets
-│   ├── dict/               # Dictionary files
-│   ├── feature_bank/       # Feature bank
-│   ├── rhea/               # RHEA database
-│   ├── rxn_json/           # Reaction JSON files
-│   ├── sample/             # Sample data
-│   └── uniprot/            # UniProt database
+├── extools/                            # External tools (downloaded)
+│   ├── ec/                             # EC-related resources
+│   └── msa/                            # MSA binaries (e.g., diamond)
 │
-├── ckpt/                   # Model checkpoints (download required)
-│   ├── prostt5/            # ProSTT5 model files
-│   └── rxnrecer/           # RXNRECer model files
+├── data/                               # Data files (download required)
+│   ├── chebi/                          # ChEBI database
+│   ├── cpd_svg/                        # Compound SVG files
+│   ├── datasets/                       # Training datasets
+│   ├── dict/                           # Dictionary files
+│   ├── feature_bank/                   # Feature bank
+│   ├── rhea/                           # RHEA database
+│   ├── rxn_json/                       # Reaction JSON files
+│   ├── sample/                         # Sample data
+│   └── uniprot/                        # UniProt database
 │
-├── results/                 # Output results
-│   ├── cache/              # Prediction cache
-│   ├── logs/               # Log files
-│   ├── predictions/        # Prediction outputs
-│   └── sample/             # Sample results
+├── ckpt/                              # Model checkpoints (download required)
+│   ├── esm/                           # ESM models
+│   ├── prostt5/                       # ProSTT5 models
+│   └── rxnrecer/                      # RXNRECer model files
 │
-├── docs/                    # Documentation
-├── scripts/                 # Build and utility scripts
-├── README.md               # This file
-├── LICENSE                 # MIT License
-├── environment_rxnrecer-release.yml  # Conda environment
-└── .gitignore             # Git ignore rules
+├── results/                            # Output results
+│   ├── cache/                          # Prediction cache
+│   ├── logs/                           # Log files
+│   ├── predictions/                    # Prediction outputs
+│   └── sample/                         # Sample results
+│
+├── docs/                               # Documentation
+├── scripts/                            # Build and utility scripts
+├── MANIFEST.in                         # Package data manifest
+├── pyproject.toml                      # Build and dependencies for PyPI
+├── environment_rxnrecer-release.yml    # Conda environment
+├── LICENSE                             # MIT License
+├── README.md                           # This file
+└── .gitignore                          # Git ignore rules
 ```
 
 ## 🔧 Configuration
