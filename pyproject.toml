@@ -43,6 +43,7 @@ dependencies = [
     "feather-format>=0.4.1",
     "pyarrow>=10.0.0",
     "fair-esm>=2.0.0",
+    "transformers>=4.20.0",
 ]
 
 [project.optional-dependencies]
