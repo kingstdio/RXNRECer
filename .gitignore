@@ -27,11 +27,15 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Package configuration files (excluded from GitHub)
-# pyproject.toml - Keep this file for PyPI packaging
-setup.py
-requirements.txt
-MANIFEST.in
+# Package/build helper files (keep pyproject.toml tracked)
+# Internal dev helpers not needed by end users
+Makefile
+.bumpversion.cfg
+setup_scm_example.py
+.githooks/
+scripts/version_manager.py
+scripts/update_docs.py
+scripts/release.py
 .pypirc
 
 # PyInstaller
