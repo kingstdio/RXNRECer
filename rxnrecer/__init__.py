@@ -14,7 +14,9 @@ import hashlib
 import json
 from pathlib import Path
 
-__version__ = "1.3.0"
+# Import version information
+from version import __version__, __version_info__, get_version, get_version_info, get_full_version
+
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
 __project__ = "RXNRECer"

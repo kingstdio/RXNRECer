@@ -28,7 +28,7 @@ share/python-wheels/
 MANIFEST
 
 # Package configuration files (excluded from GitHub)
-pyproject.toml
+# pyproject.toml - Keep this file for PyPI packaging
 setup.py
 requirements.txt
 MANIFEST.in
