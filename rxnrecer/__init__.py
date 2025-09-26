@@ -15,8 +15,8 @@ import json
 from pathlib import Path
 
 # Version information
-__version__ = "1.3.1"
-__version_info__ = (1, 3, 1)
+__version__ = "1.3.2"
+__version_info__ = (1, 3, 2)
 
 def get_version():
     """Get the version string."""
