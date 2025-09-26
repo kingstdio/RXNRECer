@@ -1,5 +1,7 @@
 # RXNRECer Installation Guide
 
+**Version 1.3.1**
+
 ## 🚀 Quick Installation
 
 ### Install from PyPI (Recommended)
