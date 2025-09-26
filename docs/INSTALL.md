@@ -32,12 +32,13 @@ pip install rxnrecer
 ### 2. Download Data and Models
 
 ```bash
-# Download all required files (~20.5GB total)
+# Download all required files (~35.8GB total)
 rxnrecer-download-data
 
 # Or download separately
-rxnrecer-download-data --data-only      # ~8.6GB
-rxnrecer-download-data --models-only    # ~11.9GB
+rxnrecer-download-data --data-only      # ~8.8GB
+rxnrecer-download-data --models-only    # ~14GB
+rxnrecer-download-data --extools-only   # ~13GB
 ```
 
 ### 3. Set Environment Variables (Optional, for S3 mode)

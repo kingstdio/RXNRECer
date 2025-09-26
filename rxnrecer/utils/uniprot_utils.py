@@ -31,9 +31,9 @@ def read_file_from_gzip(file_in_path: str, file_out_path: str, extract_type: str
 
     Args:
         file_in_path: Input gzip file path
-        file_out_path: 输出文件路径（.tsv 或 .feather）
-        extract_type: 提取类型，可选 'with_ec' | 'without_ec' | 'full'
-        save_file_type: 保存类型，'tsv' 或 'feather'
+        file_out_path: Output file path (.tsv or .feather)
+        extract_type: Extraction type, options: 'with_ec' | 'without_ec' | 'full'
+        save_file_type: Save type, 'tsv' or 'feather'
     """
     if save_file_type not in {"tsv", "feather"}:
         raise ValueError("save_file_type must be 'tsv' or 'feather'")

@@ -12,10 +12,10 @@ This directory contains pre-trained model checkpoints for RXNRECer.
 Download model files using the RXNRECer command:
 
 ```bash
-# Download all model files (~11.9GB)
+# Download all model files (~14GB)
 rxnrecer-download-data --models-only
 
-# Or download everything including data (~20.5GB total)
+# Or download everything including data (~35.8GB total)
 rxnrecer-download-data
 ```
 
@@ -39,7 +39,7 @@ After downloading, RXNRECer automatically uses these models for:
 
 ## ⚠️ Important Notes
 
-- Model files are large (~11.9GB total)
+- Model files are large (~14GB total)
 - Ensure sufficient disk space before downloading
 - Models are optimized for GPU inference
 - CPU inference is supported but slower

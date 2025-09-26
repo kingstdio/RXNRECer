@@ -466,7 +466,7 @@ def get_rxn_details_batch(df_rxns, rxn_bank, rxn_id_column='RXNRECer', spliter=c
         [<Reaction object>, <Reaction object>]
         
     Note:
-        此函数会为每行创建一个RXN_details列，List containing all Reaction objects for that row
+        This function creates an RXN_details column for each row, containing all Reaction objects
         If a row contains multiple reaction IDs (separated by delimiter), returns list containing multiple Reaction objects
         Invalid reaction IDs will be filtered out and will not appear in results
     """
@@ -591,7 +591,7 @@ def create_frontend_friendly_json(RXN_details, s3_info, output_file=None):
         return frontend_data
 
 def format_obj(x, ndigits=6):
-    """递归处理单元格内容，保留浮点数到指定小数位"""
+    """Recursively process cell content, preserve floats to specified decimal places"""
     if isinstance(x, (np.floating, float)):
         return round(float(x), ndigits)
     elif isinstance(x, dict):

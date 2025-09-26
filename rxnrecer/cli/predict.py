@@ -51,10 +51,10 @@ def load_data(input_data):
     """
     Load computation data, supports two input formats:
       1) Pass FASTA file path (str) -> auto parse to DataFrame
-      2) 直接传入 DataFrame -> 内含 'seq' 和 'uniprot_id' 列
+      2) Pass DataFrame directly -> must contain 'seq' and 'uniprot_id' columns
     """
     if isinstance(input_data, str):
-        # 假设传入的是FASTA文件路径
+        # Assume input is FASTA file path
         print(f'Detected input is a FASTA file: {input_data}')
         input_df = ftool.fasta_to_dataframe(fasta_file=input_data)
     elif isinstance(input_data, pd.DataFrame):
@@ -62,7 +62,7 @@ def load_data(input_data):
     else:
         raise ValueError("input_data should be either a path to FASTA or a pandas DataFrame.")
     
-    # 统一保证这些列存在（若你的 fasta_to_dataframe 中列名不同，需做相应处理）
+    # Ensure required columns exist
     if 'seq' not in input_df.columns:
         raise ValueError("Input DataFrame must contain column 'seq'.")
     if 'uniprot_id' not in input_df.columns:
@@ -74,13 +74,13 @@ def load_data(input_data):
 
 
 
-#region 2. 保存计算结果
+#region 2. Save results
 def save_data(resdf, output_file, output_format='tsv'):
     """
-    保存结果到文件 (TSV/JSON)
-    resdf: DataFrame 格式的结果
-    output_file: 输出文件路径
-    output_format: 'tsv' 或 'json'
+    Save results to file (TSV/JSON)
+    resdf: Result DataFrame
+    output_file: Output file path
+    output_format: 'tsv' or 'json'
     """
     resdf = resdf.applymap(lambda x: butils.format_obj(x, 4))
     if output_format == 'tsv':
@@ -136,17 +136,15 @@ def step_by_step_prediction(input_data, mode='s1', batch_size=100):
     
 
 
-#region RXNRECer 预测API
+#region RXNRECer Prediction API
 def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
     """
-    对输入的 DataFrame 进行 RXNRECer 预测，并返回预测结果 DataFrame。
-    可选参数:
-      - input_df: 输入的 DataFrame，包含 'seq' 和 'uniprot_id' 列
-      - model: 预训练好的模型
-      - mcfg: 模型参数配置
-      - featureBank: 用于计算相似度的特征库
-      - getEquation: 是否查询并附加方程信息 (需要 cfg.FILE_DS_RHEA_REACTIONS)
-      - Ensemble: 是否使用集成学习方法
+    Perform RXNRECer prediction on input DataFrame and return prediction results.
+    Args:
+      - input_df: Input DataFrame with 'seq' and 'uniprot_id' columns
+      - model: Pre-trained model
+      - mcfg: Model configuration
+      - mode: Prediction mode ('s1' or 's2')
     """
     input_df = input_df.reset_index(drop=True)
     # RXNRECer-S1
@@ -159,15 +157,14 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         batch_size=2,
         device=mcfg.device
     )
-    # 整合预测结果
-    # 注意：如果想保留原来所有列，可以在 input_df.copy() 的基础上再拼结果
+    # Integrate prediction results
     res_df_s1 = input_df[['uniprot_id']].reset_index(drop=True).copy()
     res_df_s1['RXNRECer'] = res
     res_df_s1['RXNRECer_with_prob'] = res_prob
     res_df_s1 = res_df_s1.rename(columns={'uniprot_id': 'input_id'})
     
     if mode == 's1':
-        #获取反应详情
+        # Get reaction details
         rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
         res_df_s1= butils.get_rxn_details_batch(df_rxns=res_df_s1, rxn_bank=rxn_bank, rxn_id_column='RXNRECer')
         res_df_s1['rxn_details'] = res_df_s1.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
@@ -175,14 +172,14 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         return res_df_s1
 
 
-    # 集成学习
+    # Ensemble learning
     if mode == 's2':
         print('Running RXNRECer-S2 ...')
-        res_df_s2 = get_ensemble(input_df=input_df[['uniprot_id', 'seq']], rxnrecer_df=res_df_s1)#集成学习
-        #获取反应详情
+        res_df_s2 = get_ensemble(input_df=input_df[['uniprot_id', 'seq']], rxnrecer_df=res_df_s1)  # Ensemble learning
+        # Get reaction details
         rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
         res_df_s2= butils.get_rxn_details_batch(df_rxns=res_df_s2, rxn_bank=rxn_bank, rxn_id_column='RXNRECer')
-        #格式化输出
+        # Format output
         res_df_s2['rxn_details'] = res_df_s2.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
         res_df_s2 = res_df_s2[['input_id','RXNRECer', 'RXNRECer_with_prob', 'rxn_details']]
         return res_df_s2
@@ -202,24 +199,24 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         
 # endregion
 
-#region 集成时处理酶和非酶混合情况
+#region Handle enzyme/non-enzyme mixed cases in ensemble
 def res_refinement(rxn_prob):
     """
-    精炼酶预测反应结果，规则：
-    1. 只有一个结果（无论是否为非酶），直接保留
-    2. 如果 '-' 是最大概率项，则认为是非酶，保留 '-'
-    3. 如果 '-' 是最小概率项或居中（非最大非最小），则删除 '-'
+    Refine enzyme prediction results with rules:
+    1. Single result (enzyme or non-enzyme) -> keep as is
+    2. If '-' has highest probability -> non-enzyme, keep '-'
+    3. If '-' has lower probability -> remove '-'
     """
     if len(rxn_prob) == 1:
         return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
 
     sorted_items = sorted(rxn_prob.items(), key=lambda x: x[1], reverse=True)
 
-    # 如果 '-' 是最高概率项 → 非酶，保留
+    # If '-' has highest probability -> non-enzyme, keep
     if sorted_items[0][0] == '-':
         return '-', {'-': rxn_prob['-']}
 
-    # 如果 '-' 存在且不是最高项 → 无论居中或最小，统一删除
+    # If '-' exists and not highest -> remove regardless of position
     if '-' in rxn_prob:
         rxn_prob.pop('-')
 
@@ -229,24 +226,24 @@ def res_refinement(rxn_prob):
 
 def get_ensemble(input_df, rxnrecer_df):
     """
-    融合多个方法对蛋白Perform reaction prediction，生成集成预测结果，并处理酶/非酶混合情况。
+    Ensemble multiple methods for protein reaction prediction and handle enzyme/non-enzyme mixed cases.
 
-    输入参数：
-    - input_df: 待预测的蛋白信息（DataFrame），需包含 'uniprot_id' 列
-    - rxnrecer_df: RXNRECer 预测结果（DataFrame），需包含 'input_id' 和 'RXNRECer_with_prob' 列
+    Args:
+    - input_df: Protein info DataFrame with 'uniprot_id' column
+    - rxnrecer_df: RXNRECer prediction results with 'input_id' and 'RXNRECer_with_prob' columns
 
-    返回：
-    - res_df: 仅包含 input_id、融合预测字符串（RXNRECer）和概率字典（RXNRECer_with_prob）的 DataFrame
+    Returns:
+    - res_df: DataFrame with input_id, ensemble prediction string (RXNRECer) and probability dict (RXNRECer_with_prob)
     """
 
-    # 调用各个预测方法（MSA、CatFam、ECRECer、T5、RXNRECer）
+    # Call various prediction methods (MSA, CatFam, ECRECer, T5, RXNRECer)
     res_msa = predRXN.getmsa(df_test=input_df, k=1)
     res_catfam = predRXN.getcatfam(df_test=input_df)
     res_ecrecer = predRXN.getecrecer(df_test=input_df)
     res_t5 = predRXN.getT5(df_test=input_df, topk=1)
     res_rxnrecer = rxnrecer_df.copy().rename(columns={'input_id': 'uniprot_id'})
 
-    # 融合不同模型的结果到同一 DataFrame 中（按 uniprot_id 左连接）
+    # Merge different model results into same DataFrame (left join on uniprot_id)
     baggingdf = res_rxnrecer.merge(
                     res_msa[['uniprot_id', 'rxn_msa']], on='uniprot_id', how='left'
                 ).merge(
@@ -257,11 +254,11 @@ def get_ensemble(input_df, rxnrecer_df):
                     res_t5, on='uniprot_id', how='left'
                 )
 
-    # 标准化缺失预测：将 NO-PREDICTION、None 和 NaN 统一处理为 '-'
+    # Standardize missing predictions: convert NO-PREDICTION, None and NaN to '-'
     baggingdf.replace(['NO-PREDICTION', 'None'], '-', inplace=True)
     baggingdf.fillna('-', inplace=True)
 
-    # 调用集成方法进行融合，返回每个蛋白对应的反应预测字典（含概率）
+    # Call ensemble method for fusion, return reaction prediction dict with probabilities for each protein
     baggingdf['ensemble'] = baggingdf.apply(lambda x: integrateEnsemble(
         esm=x.esm,
         t5=x.t5,
@@ -271,19 +268,19 @@ def get_ensemble(input_df, rxnrecer_df):
         rxn_ecrecer=x.rxn_ecrecer
     ), axis=1)
 
-    # 提取融合结果为两列：
-    # - RXNRECer：拼接 reaction ids（字符串）
-    # - RXNRECer_with_prob：原始融合字典
+    # Extract ensemble results into two columns:
+    # - RXNRECer: concatenated reaction ids (string)
+    # - RXNRECer_with_prob: original ensemble dict
     baggingdf['RXNRECer_with_prob'] = baggingdf['ensemble']
     baggingdf['RXNRECer'] = baggingdf['ensemble'].apply(lambda x: cfg.SPLITER.join(x.keys()))
 
-    # 恢复 input_id 命名以便与外部保持一致
+    # Restore input_id naming for consistency with external interface
     baggingdf.rename(columns={'uniprot_id': 'input_id'}, inplace=True)
 
-    # 仅保留需要输出的字段
+    # Keep only required output fields
     res_df = baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']].copy()
 
-    #对酶/非酶混合情况进行清洗（去除无效或冲突的 '-' 标签）
+    # Clean enzyme/non-enzyme mixed cases (remove invalid or conflicting '-' labels)
     res_df[['RXNRECer', 'RXNRECer_with_prob']] = res_df.apply(
         lambda row: pd.Series(res_refinement(dict(row['RXNRECer_with_prob']))),
         axis=1

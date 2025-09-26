@@ -56,17 +56,17 @@ def verify_data_structure(data_root):
             print(f"   ✅ {file_path} ({size / (1024*1024):.1f} MB)")
         else:
             missing_files.append(file_path)
-            print(f"   ❌ {file_path} - 缺失")
+            print(f"   ❌ {file_path} - Missing")
     
     return len(missing_files) == 0, missing_files
 
 def verify_model_structure(ckpt_root):
-    """验证模型目录结构"""
+    """Verify model directory structure"""
     required_files = [
         "rxnrecer/production_185846best.pth"
     ]
     
-    print("🔍 验证模型目录结构...")
+    print("🔍 Verifying model directory structure...")
     missing_files = []
     
     for file_path in required_files:
@@ -76,23 +76,23 @@ def verify_model_structure(ckpt_root):
             print(f"   ✅ {file_path} ({size / (1024*1024):.1f} MB)")
         else:
             missing_files.append(file_path)
-            print(f"   ❌ {file_path} - 缺失")
+            print(f"   ❌ {file_path} - Missing")
     
     return len(missing_files) == 0, missing_files
 
 def main():
-    parser = argparse.ArgumentParser(description="RXNRECer数据验证脚本")
-    parser.add_argument("--data-root", default="~/.rxnrecer/data", help="数据目录路径")
-    parser.add_argument("--ckpt-root", default="~/.rxnrecer/ckpt", help="模型目录路径")
-    parser.add_argument("--manifest", help="数据清单File path")
+    parser = argparse.ArgumentParser(description="RXNRECer data verification script")
+    parser.add_argument("--data-root", default="~/.rxnrecer/data", help="Data directory path")
+    parser.add_argument("--ckpt-root", default="~/.rxnrecer/ckpt", help="Model directory path")
+    parser.add_argument("--manifest", help="Data manifest file path")
     
     args = parser.parse_args()
     
-    # 展开用户路径
+    # Expand user paths
     data_root = os.path.expanduser(args.data_root)
     ckpt_root = os.path.expanduser(args.ckpt_root)
     
-    print("🚀 RXNRECer 数据验证工具")
+    print("🚀 RXNRECer Data Verification Tool")
     print("=" * 50)
     
     # 检查目录是否存在

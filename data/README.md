@@ -22,10 +22,10 @@ data/
 Download data files using the RXNRECer command:
 
 ```bash
-# Download all data files (~8.6GB)
+# Download all data files (~8.8GB)
 rxnrecer-download-data --data-only
 
-# Or download everything including models (~20.5GB total)
+# Or download everything including models (~35.8GB total)
 rxnrecer-download-data
 ```
 
@@ -99,7 +99,7 @@ After downloading the data files:
 
 ## ⚠️ Important Notes
 
-- **File Size**: Total data size is approximately 8.6GB
+- **File Size**: Total data size is approximately 8.8GB
 - **Download Time**: Depending on your internet connection, download may take 10-60 minutes
 - **Disk Space**: Ensure you have at least 10GB free disk space
 - **Permissions**: Make sure you have write permissions in the current directory

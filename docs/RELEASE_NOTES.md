@@ -62,9 +62,10 @@ RXNRECer/                    # Project root
 
 #### 📥 Automatic Data Download
 ```bash
-rxnrecer-download-data        # Download all files (~20.5GB)
-rxnrecer-download-data --data-only      # Data only (~8.6GB)
-rxnrecer-download-data --models-only    # Models only (~11.9GB)
+rxnrecer-download-data        # Download all files (~35.8GB)
+rxnrecer-download-data --data-only      # Data only (~8.8GB)
+rxnrecer-download-data --models-only    # Models only (~14GB)
+rxnrecer-download-data --extools-only   # External tools only (~13GB)
 ```
 
 #### 💾 Smart Caching

@@ -14,7 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 
-__version__ = "1.1.0"
+__version__ = "1.3.0"
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
 __project__ = "RXNRECer"
@@ -34,7 +34,8 @@ def check_data_files():
     required_dirs = [
         "data/sample",
         "ckpt/rxnrecer",
-        "ckpt/prostt5"
+        "ckpt/prostt5",
+        "extools"
     ]
     
     missing_dirs = []
@@ -54,6 +55,8 @@ def check_data_files():
         print("   - Data (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz")
         print("   - Models (国内镜像): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz")
         print("   - Models (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz")
+        print("   - Extools (国内镜像): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz")
+        print("   - Extools (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz")
         return False
     
     print("✅ All required data files are available")
@@ -109,12 +112,15 @@ def select_fastest_mirror(urls, timeout=5):
     print(f"✅ Selected fastest mirror: {urlparse(fastest_url).hostname}")
     return fastest_url
 
-def download_data_files(force=False):
+def download_data_files(force=False, data_only=False, models_only=False, extools_only=False):
     """
     Download required data files automatically.
     
     Args:
         force (bool): Force download even if files exist
+        data_only (bool): Download only data files
+        models_only (bool): Download only model files
+        extools_only (bool): Download only external tools
     
     Returns:
         bool: True if download successful, False otherwise
@@ -142,34 +148,55 @@ def download_data_files(force=False):
             "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz",  # 国内镜像
             "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz"  # AWS镜像
         ]
+        extools_urls = [
+            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz",  # 国内镜像
+            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz"  # AWS镜像
+        ]
         
-        if not os.path.exists("data/sample") or force:
-            print("📥 Downloading data files (~8.6GB)...")
-            data_url = select_fastest_mirror(data_urls)
-            if use_wget:
-                subprocess.run(["wget", "-O", "data.tar.gz", data_url], check=True)
-            else:
-                urllib.request.urlretrieve(data_url, "data.tar.gz")
-            
-            print("📦 Extracting data files...")
-            with tarfile.open("data.tar.gz", "r:gz") as tar:
-                tar.extractall(".")
-            os.remove("data.tar.gz")
-            print("✅ Data files downloaded and extracted")
+        if (not data_only and not models_only and not extools_only) or data_only:
+            if not os.path.exists("data/sample") or force:
+                print("📥 Downloading data files (~8.8GB)...")
+                data_url = select_fastest_mirror(data_urls)
+                if use_wget:
+                    subprocess.run(["wget", "-O", "data.tar.gz", data_url], check=True)
+                else:
+                    urllib.request.urlretrieve(data_url, "data.tar.gz")
+                
+                print("📦 Extracting data files...")
+                with tarfile.open("data.tar.gz", "r:gz") as tar:
+                    tar.extractall(".")
+                os.remove("data.tar.gz")
+                print("✅ Data files downloaded and extracted")
         
-        if not os.path.exists("ckpt/rxnrecer") or force:
-            print("📥 Downloading model files (~11.9GB)...")
-            ckpt_url = select_fastest_mirror(ckpt_urls)
-            if use_wget:
-                subprocess.run(["wget", "-O", "ckpt.tar.gz", ckpt_url], check=True)
-            else:
-                urllib.request.urlretrieve(ckpt_url, "ckpt.tar.gz")
-            
-            print("📦 Extracting model files...")
-            with tarfile.open("ckpt.tar.gz", "r:gz") as tar:
-                tar.extractall(".")
-            os.remove("ckpt.tar.gz")
-            print("✅ Model files downloaded and extracted")
+        if (not data_only and not models_only and not extools_only) or models_only:
+            if not os.path.exists("ckpt/rxnrecer") or force:
+                print("📥 Downloading model files (~14GB)...")
+                ckpt_url = select_fastest_mirror(ckpt_urls)
+                if use_wget:
+                    subprocess.run(["wget", "-O", "ckpt.tar.gz", ckpt_url], check=True)
+                else:
+                    urllib.request.urlretrieve(ckpt_url, "ckpt.tar.gz")
+                
+                print("📦 Extracting model files...")
+                with tarfile.open("ckpt.tar.gz", "r:gz") as tar:
+                    tar.extractall(".")
+                os.remove("ckpt.tar.gz")
+                print("✅ Model files downloaded and extracted")
+        
+        if (not data_only and not models_only and not extools_only) or extools_only:
+            if not os.path.exists("extools") or force:
+                print("📥 Downloading external tools (~13GB)...")
+                extools_url = select_fastest_mirror(extools_urls)
+                if use_wget:
+                    subprocess.run(["wget", "-O", "extools.tar.gz", extools_url], check=True)
+                else:
+                    urllib.request.urlretrieve(extools_url, "extools.tar.gz")
+                
+                print("📦 Extracting external tools...")
+                with tarfile.open("extools.tar.gz", "r:gz") as tar:
+                    tar.extractall(".")
+                os.remove("extools.tar.gz")
+                print("✅ External tools downloaded and extracted")
         
         print("🎉 All files downloaded successfully!")
         return True

@@ -237,7 +237,6 @@ tmp/
 *.tsv
 *.json
 *.xml
-*.fasta
 *.fa
 *.faa
 *.fna
@@ -386,3 +385,6 @@ scripts/*.slurm.out
 scripts/*.lo
 __init__.py
 *.sif
+ckpt.tar.gz
+data.tar.gz
+extools.tar.gz

@@ -329,14 +329,3 @@ def evaluate_ensemble_predictions(predictions_list: List[pd.DataFrame],
     return metrics
 
 
-def voting_ensemble(predictions_list: List[pd.DataFrame]) -> pd.DataFrame:
-    """Simple voting ensemble."""
-    # TODO: Implement voting ensemble
-    pass
-
-
-def weighted_voting_ensemble(predictions_list: List[pd.DataFrame], 
-                           weights: List[float]) -> pd.DataFrame:
-    """Weighted voting ensemble."""
-    # TODO: Implement weighted voting ensemble
-    pass

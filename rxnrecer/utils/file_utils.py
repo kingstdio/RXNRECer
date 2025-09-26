@@ -332,7 +332,7 @@ def downlod(
 #endregion
 
 
-#region DataFrame表格转fasta文件
+#region DataFrame to FASTA file conversion
 def table2fasta(table, file_out):
     """Convert DataFrame to FASTA file, input two columns: [sequence name, sequence]
 
