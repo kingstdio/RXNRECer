@@ -44,6 +44,7 @@ dependencies = [
     "fair-esm>=2.0.0",
     "transformers>=4.20.0",
     "pandarallel>=1.6.0",
+    "rdkit-pypi>=2022.9.3",
 ]
 
 [project.optional-dependencies]
