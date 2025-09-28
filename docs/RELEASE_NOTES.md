@@ -1,6 +1,6 @@
 # RXNRECer Release Notes
 
-## Version 1.3.5 - PyPI Release
+## Version 1.3.6 - PyPI Release
 
 **Release Date**: August 2025  
 **Status**: Production Ready
@@ -88,7 +88,7 @@ rxnrecer-cache clear --all    # Clear all cache
 - Added cache management examples
 - Streamlined project structure
 
-### 🔄 Migration from v1.3.5
+### 🔄 Migration from v1.3.6
 
 1. **Installation**: Use `pip install rxnrecer` instead of GitHub clone
 2. **Caching**: New cache system automatically improves performance

@@ -45,6 +45,7 @@ dependencies = [
     "transformers>=4.20.0",
     "pandarallel>=1.6.0",
     "rdkit-pypi>=2022.9.3",
+    "sentencepiece>=0.1.99",
 ]
 
 [project.optional-dependencies]
