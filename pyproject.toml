@@ -73,6 +73,7 @@ PyPI = "https://pypi.org/project/rxnrecer/"
 rxnrecer = "rxnrecer.cli.predict:main"
 rxnrecer-download-data = "rxnrecer.cli.download:download_data"
 rxnrecer-cache = "rxnrecer.cli.cache:cache"
+rxnrecer-genmolsvg = "rxnrecer.cli.genmolsvg:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "rxnrecer.__version__"}

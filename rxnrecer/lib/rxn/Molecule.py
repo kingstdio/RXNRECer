@@ -54,6 +54,24 @@ class Molecule:
         return self.draw_mol_simple()
     
     
+    def _get_stable_filename_hash(self):
+        """Return a deterministic hash for filename based on CHEBI ID or canonical SMILES.
+
+        Using the rendered SVG text causes filename changes when labels/styles vary.
+        To keep a stable mapping for the same chemical structure, prefer CHEBI ID if
+        present; otherwise use RDKit canonical SMILES.
+        """
+        try:
+            if self.cpd_ref_chebi:
+                key = self.cpd_ref_chebi.strip()
+            else:
+                # Canonical, isomeric SMILES for stability
+                key = Chem.MolToSmiles(self.mol, isomericSmiles=True, canonical=True)
+            return hashlib.md5(key.encode('utf-8')).hexdigest()
+        except Exception:
+            # Fallback to hashing the raw SMILES string
+            return hashlib.md5(self.cpd_smiles.encode('utf-8')).hexdigest()
+
     def write_mol_svg(self, file_path):
         with open(file_path, 'w') as f:
             f.write(self.mol_svg)
@@ -126,8 +144,6 @@ class Molecule:
         
         return mol_svg
     
-
-    
     
     def draw_mol_simple(self):
         mol = self.mol
@@ -173,14 +189,18 @@ class Molecule:
         # 将 SVG 写入到文件
         if not os.path.exists(f'{cfg.DIR_CPD_SVG}'):
             os.makedirs(f'{cfg.DIR_CPD_SVG}')
-    
-        file_name =f'{cfg.DIR_CPD_SVG}{hashlib.md5(svg.encode("utf-8")).hexdigest()}.svg'
-        with open(f'{file_name}', "w", encoding="utf-8") as file:
-            file.write(svg)
+        
+        # Use a deterministic filename derived from CHEBI ID or canonical SMILES
+        stable_hash = self._get_stable_filename_hash()
+        file_name = f'{cfg.DIR_CPD_SVG}{stable_hash}.svg'
+        
+        # If already exists, skip re-writing to keep IO minimal
+        if not os.path.exists(file_name):
+            with open(f'{file_name}', "w", encoding="utf-8") as file:
+                file.write(svg)
         
                 
         return os.path.relpath(file_name, cfg.DIR_PROJECT_ROOT) #返回相对路径
-
     
     def to_html(self):
         """生成 HTML 来展示反应物和生成物的图像及其链接"""

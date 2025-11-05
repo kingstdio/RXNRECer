@@ -15,8 +15,8 @@ import json
 from pathlib import Path
 
 # Version information
-__version__ = "1.3.4"
-__version_info__ = (1, 3, 4)
+__version__ = "1.3.7"
+__version_info__ = (1, 3, 7)
 
 def get_version():
     """Get the version string."""
@@ -28,7 +28,7 @@ def get_version_info():
 
 def get_full_version():
     """Get the full version string with build info."""
-    return f"{__version__} (2024-09-26)"
+    return f"{__version__} (2025-11-05)"
 
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
