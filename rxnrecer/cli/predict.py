@@ -393,7 +393,7 @@ Examples:
     parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='json', help='Output format: tsv or json (default: tsv)')
     parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
     parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
-    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.3.3')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.3.7')
     
     # 显示帮助信息
     if len(sys.argv) == 1:
@@ -419,7 +419,7 @@ Examples:
         os.makedirs(output_dir)
     
     # 4. 显示运行信息
-    print(f"RXNRECer v1.3.6 - Enzyme Reaction Prediction")
+    print(f"RXNRECer v1.3.7 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")

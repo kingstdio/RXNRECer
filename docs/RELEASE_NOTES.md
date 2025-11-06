@@ -1,5 +1,51 @@
 # RXNRECer Release Notes
 
+## Version 1.3.7 - SVG Generation & Stability Improvements
+
+**Release Date**: November 2025  
+**Status**: Production Ready
+
+### 🎉 Major Features
+
+- **New CLI Tool**: `rxnrecer-genmolsvg` - Batch generate molecule SVGs for all reactions
+- **Deterministic SVG Filenames**: Stable file naming based on CHEBI ID or canonical SMILES
+- **SVG Path Fix**: Fixed missing SVG files in JSON output
+- **Improved Reliability**: Cache disabled by default to ensure fresh SVG generation
+
+### 🚀 New Capabilities
+
+#### Molecule SVG Generation
+```bash
+rxnrecer-genmolsvg              # Generate all molecule SVGs
+rxnrecer-genmolsvg --limit 100  # Test with first 100 reactions
+```
+
+#### Stable File Naming
+- SVG files named using CHEBI ID (if available) or canonical SMILES hash
+- Same compound always generates same filename
+- Compatible with pre-generated SVG batches
+
+### 🐛 Bug Fixes
+
+- Fixed SVG file path resolution in JSON output
+- Fixed missing SVG files in reaction details
+- Improved project root directory detection
+- Better error handling for molecule generation
+
+### 📚 Documentation
+
+- Updated version references to 1.3.7
+- Added SVG generation documentation
+- Improved CLI help messages
+
+### 🔄 Migration from v1.3.6
+
+1. **SVG Files**: Run `rxnrecer-genmolsvg` to pre-generate all molecule SVGs
+2. **Cache**: Cache is now disabled by default for reliability
+3. **CLI**: New `rxnrecer-genmolsvg` command available
+
+---
+
 ## Version 1.3.6 - PyPI Release
 
 **Release Date**: August 2025  
