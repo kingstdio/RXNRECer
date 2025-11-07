@@ -38,7 +38,6 @@ case/fusarium_venenatum/data/pdbs/*
 case/fusarium_venenatum/middle/*
 *.png
 *cif
-*.pdf
 *.ai
 *._.DS_Store
 *._*
