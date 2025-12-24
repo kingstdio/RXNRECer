@@ -5,39 +5,60 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/badge/PyPI-rxnrecer-blue.svg)](https://pypi.org/project/rxnrecer/)
 
-**RXNRECer v1.3.7** is a deep learning framework for predicting enzyme-catalyzed reactions from protein sequences.
-It is the official implementation of "RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction."
+**RXNRECer v1.3.7** is a deep learning framework for predicting enzyme-catalyzed reactions directly from protein sequences.
+It is the official implementation of  
+**“RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction.”**
 
-**🎉 Now available on PyPI for easy installation!**
+🎉 **Now available on PyPI for easy installation!**
+
+---
 
 ## 🚀 Features
 
-- **Multi-Stage Prediction**: S1 (reaction prediction), S2 (reaction integration), S3 (LLM reasoning)
-- **Protein Sequence Analysis**: Process protein sequences in FASTA format
-- **Deep Learning Models**: ESM-2 embeddings with advanced neural architectures
-- **GPU Acceleration**: CUDA support for faster inference
-- **Easy-to-use CLI**: Simple command-line interface with comprehensive options
-- **Smart Caching**: Automatic result caching for faster repeated predictions
+- **Multi-stage prediction framework**
+  - S1: Direct reaction-level prediction
+  - S2: Multi-source ensemble integration
+  - S3: LLM-based prompt-guided reasoning and interpretability
+- **Protein sequence analysis** from FASTA input
+- **Deep learning models** based on ESM-2 protein language models
+- **GPU acceleration** with CUDA support
+- **Easy-to-use CLI** for large-scale batch inference
+- **Smart caching** for efficient repeated predictions
 
-## 📋 Requirements
+---
 
-- Python 3.10+
-- PyTorch 2.0+
-- CUDA 11.0+ (recommended)
-- 32GB+ RAM
-- 40GB+ disk space
+## 📋 System Requirements
+
+- **Python**: 3.10+
+- **PyTorch**: 2.0+
+- **CUDA**: 11.0+ (recommended, GPU optional)
+- **Memory**: ≥32 GB RAM
+- **Disk space**: ≥40 GB (for data and model files)
+
+### Tested Environments
+- Ubuntu 20.04 / 22.04
+- Python 3.10, 3.11
+- PyTorch 2.x with CUDA 11.x / 12.x
+
+---
+
+## ⏱ Installation Time
+
+- **Typical installation time**: ~10–20 minutes (excluding data/model downloads)
+- **Data & model download time**: ~15–30 minutes (network dependent)
+
+---
 
 ## 🚀 Quick Start
 
 ### 1. Install (Recommended)
 
 ```bash
-# Install from PyPI (recommended)
+# Install from PyPI
 pip install rxnrecer
 
-# Or install from GitHub
+# Or install the latest version from GitHub
 pip install git+https://github.com/kingstdio/RXNRECer.git
-```
 
 ### 2. Download Data
 
@@ -63,6 +84,15 @@ rxnrecer -i input.fasta -o output.tsv -m s2
 # LLM reasoning (S3 mode, requires API key)
 rxnrecer -i input.fasta -o output.json -m s3 -f json
 ```
+
+### ⏱ Expected Runtime (Demo)
+- S1 / S2 inference: ~1–3 minutes for ~100 proteins (tested on a typical workstation: 32 GB RAM + 1×GPU)
+- S3 (LLM reasoning): +5–30 seconds / protein (depends on API latency and chosen LLM)
+- Training: not included in the demo
+- CPU-only inference: supported but significantly slower (not recommended for large batches)
+
+Note: The demo focuses on inference and usage examples. Full benchmarking from the paper requires extra datasets and scripts described in the Methods section.
+
 
 ## 🔧 Usage
 
