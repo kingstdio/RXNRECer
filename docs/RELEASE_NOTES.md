@@ -1,5 +1,27 @@
 # RXNRECer Release Notes
 
+## Version 1.4.0 - Reviewer-Response Release
+
+**Release Date**: July 20, 2026  
+**Status**: Production Ready
+
+### Major Updates
+
+- Added clearer installation and reproducibility guidance for reviewer verification.
+- Documented the validated environment profile, including Python, NumPy, PyTorch, CUDA, pandas, scikit-learn, and Apptainer versions.
+- Clarified S2/S3 container-runtime requirements for CatFam and ECRECer `.sif` images.
+- Added public webserver documentation and local usage guidance.
+- Added LLM API setup documentation for hosted providers and local vLLM/SGLang-compatible services.
+- Restored dynamic package version generation from `rxnrecer.__version__` for release builds.
+
+### Migration from v1.3.7
+
+1. Install or upgrade with `python -m pip install -U rxnrecer`.
+2. Use NumPy 1.x for the current validated release profile.
+3. For S2/S3, verify `singularity --version` and inspect the downloaded CatFam/ECRECer images before large runs.
+
+---
+
 ## Version 1.3.7 - SVG Generation & Stability Improvements
 
 **Release Date**: November 2025  
@@ -46,7 +68,7 @@ rxnrecer-genmolsvg --limit 100  # Test with first 100 reactions
 
 ---
 
-## Version 1.3.6 - PyPI Release
+## Version 1.3.7 - PyPI Release
 
 **Release Date**: August 2025  
 **Status**: Production Ready

@@ -1,6 +1,4 @@
 from cProfile import label
-import os
-import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +7,7 @@ import torch.nn.parallel
 from torch.nn.parallel._functions import Scatter
 from torch.nn.parallel import DataParallel
 import torch
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import torch.backends.cudnn as cudnn
 import pandas as pd
 import numpy as np
@@ -23,6 +21,34 @@ from sklearn import metrics
 from sklearn.metrics import pairwise_distances
 
 import json
+
+
+INFERENCE_RESIDUE_BUDGET = 21288  # H100 8G: ~7096 aa sequences fit safely at batch_size=3
+
+
+def _normalize_sequence_batches(sequences, batch_size, seq_cut_threshold, dynamic_batching=True):
+    normalized_sequences = [seq[:seq_cut_threshold] for seq in sequences]
+    if not normalized_sequences:
+        return [], []
+
+    indexed_sequences = [(idx, seq, len(seq)) for idx, seq in enumerate(normalized_sequences)]
+    if not dynamic_batching or batch_size <= 1:
+        batches = [[item] for item in indexed_sequences] if batch_size <= 1 else [
+            indexed_sequences[i:i + batch_size] for i in range(0, len(indexed_sequences), batch_size)
+        ]
+        return normalized_sequences, batches
+
+    sorted_sequences = sorted(indexed_sequences, key=lambda item: item[2], reverse=True)
+    target_total_length = max(batch_size, INFERENCE_RESIDUE_BUDGET)
+
+    batches = []
+    start = 0
+    while start < len(sorted_sequences):
+        current_max_len = max(1, sorted_sequences[start][2])
+        current_batch_size = max(1, min(batch_size, target_total_length // current_max_len))
+        batches.append(sorted_sequences[start:start + current_batch_size])
+        start += current_batch_size
+    return normalized_sequences, batches
 
 # Step 1: Define the Dataset and DataLoader
 class ProteinDataset(torch.utils.data.Dataset):
@@ -126,7 +152,6 @@ class BGRU(nn.Module):
         self.device = device
         # Create an EsmEmbedding instance
         self.embedding = EsmEmbedding(freeze_esm_layers=freeze_esm_layers, device=self.device)
-        # Define the GRU, attention, and output layers
         self.gru = nn.GRU(input_dimensions, gru_h_size, batch_first=True, bidirectional=True)
         self.attention = SelfAttention(attention_size, (gru_h_size * 2))
         self.output_layer = nn.Linear((gru_h_size * 2), output_dimensions)
@@ -137,22 +162,34 @@ class BGRU(nn.Module):
         esm_out = esm_out.unsqueeze(1)
         gru_output, _ = self.gru(esm_out)
         attention_out = self.attention(gru_output)
-        # print(torch.unique(torch.eq(gru_output.squeeze(1), attention_out)))
-        drop_out_x = self.dropout(attention_out)  # Apply dropout
+        drop_out_x = self.dropout(attention_out)
         output = self.output_layer(drop_out_x)
         output1 = self.output_layer(gru_output.squeeze(1))
         return output,output1
 
 
 #region  predict reactions with trained model using protein sequences
-def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size=512, device=torch.device("cpu"), seq_cut_threshold=10000):
-    
-    data_loader = DataLoader(sequences, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size=512, device=torch.device("cpu"), seq_cut_threshold=10000, dynamic_batching=True, show_progress=True, progress_desc=None, progress_position=None):
+    sequences = list(sequences)
+    normalized_sequences, sequence_batches = _normalize_sequence_batches(
+        sequences=sequences,
+        batch_size=batch_size,
+        seq_cut_threshold=seq_cut_threshold,
+        dynamic_batching=dynamic_batching,
+    )
            
-    # 加载已保存模型
-    state_dict = torch.load(model_weight_path, map_location=device)
-    model.load_state_dict({k.replace("module.", ""): v for k, v in state_dict.items()})
-    model.to(device)
+    # 同一个模型实例在一次推理流程里可能被重复调用很多次；
+    # 这里做一次轻量缓存，避免每个 batch 都重复 torch.load 权重。
+    loaded_weight_path = getattr(model, "_loaded_weight_path", None)
+    if loaded_weight_path != str(model_weight_path):
+        state_dict = torch.load(
+            model_weight_path,
+            map_location=device,
+            weights_only=True,
+        )
+        model.load_state_dict({k.replace("module.", ""): v for k, v in state_dict.items()})
+        model.to(device)
+        model._loaded_weight_path = str(model_weight_path)
 
     # 加载字典
     with open(dict_path, 'r') as f:
@@ -160,15 +197,25 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
 
     # 获取模型预测结果
     model.eval()
-    all_reactions = []
-    all_probabilities = []  # 用于存储每个样本的标签及其对应的原始概率
+    all_reactions = [None] * len(normalized_sequences)
+    all_probabilities = [None] * len(normalized_sequences)  # 用于存储每个样本的标签及其对应的原始概率
     
     predictions = []
     with torch.no_grad():
-        for batch_x in tqdm(data_loader, desc="Predicting reactions"):
-            
-            batch_x = [seq[:seq_cut_threshold] for seq in batch_x]
-            
+        batch_iterator = (
+            tqdm(
+                sequence_batches,
+                desc=progress_desc or "Predicting reactions",
+                position=progress_position,
+                leave=True,
+            )
+            if show_progress
+            else sequence_batches
+        )
+        for batch_items in batch_iterator:
+            batch_indices = [item[0] for item in batch_items]
+            batch_x = [item[1] for item in batch_items]
+
             outputs = model(batch_x)[0]
             sigmoid_outputs = torch.sigmoid(outputs)
             y_preds = (sigmoid_outputs > 0.5).int().cpu().tolist()
@@ -189,8 +236,9 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
                 for i, pred in enumerate(y_preds)
             ]
                                  
-            all_reactions.extend(reactions)
-            all_probabilities.extend(probabilities)
+            for original_idx, reaction, probability in zip(batch_indices, reactions, probabilities):
+                all_reactions[original_idx] = reaction
+                all_probabilities[original_idx] = probability
             
         return all_reactions, all_probabilities
 #endregion

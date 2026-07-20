@@ -3,6 +3,9 @@
 
 .PHONY: help version current bump-major bump-minor bump-patch set-version install test clean build release
 
+PYTHON ?= /hpcfs/fhome/shizhenkun/miniconda3/envs/rxnrecer-release/bin/python
+PIP ?= /hpcfs/fhome/shizhenkun/miniconda3/envs/rxnrecer-release/bin/pip
+
 # Default target
 help:
 	@echo "RXNRECer Development Commands"
@@ -26,36 +29,36 @@ help:
 
 # Version management
 version current:
-	@python scripts/version_manager.py current
+	@$(PYTHON) scripts/version_manager.py current
 
 bump-major:
-	@python scripts/version_manager.py bump major
+	@$(PYTHON) scripts/version_manager.py bump major
 
 bump-minor:
-	@python scripts/version_manager.py bump minor
+	@$(PYTHON) scripts/version_manager.py bump minor
 
 bump-patch:
-	@python scripts/version_manager.py bump patch
+	@$(PYTHON) scripts/version_manager.py bump patch
 
 set-version:
 	@if [ -z "$(VER)" ]; then \
 		echo "❌ Error: Please specify version with VER=1.4.0"; \
 		exit 1; \
 	fi
-	@python scripts/version_manager.py set $(VER)
+	@$(PYTHON) scripts/version_manager.py set $(VER)
 
 update-docs:
 	@echo "📚 Updating documentation version references..."
-	@python scripts/update_docs.py
+	@$(PYTHON) scripts/update_docs.py
 
 # Development commands
 install:
 	@echo "📦 Installing RXNRECer in development mode..."
-	pip install -e .
+	$(PIP) install -e .
 
 test:
 	@echo "🧪 Running tests..."
-	python -m pytest tests/ -v
+	$(PYTHON) -m unittest discover -s tests -v
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
@@ -68,21 +71,21 @@ clean:
 
 build:
 	@echo "🔨 Building package..."
-	python -m build
+	$(PYTHON) -m build
 
 release: clean build
 	@echo "🚀 Releasing to PyPI..."
-	python -m twine upload dist/*
+	$(PYTHON) -m twine upload dist/*
 
 # Git integration
 commit-version:
 	@echo "📝 Committing version changes..."
 	git add .
-	git commit -m "Bump version to $(shell python scripts/version_manager.py current)"
+	git commit -m "Bump version to $(shell $(PYTHON) scripts/version_manager.py current)"
 
 tag-version:
 	@echo "🏷️  Creating version tag..."
-	git tag v$(shell python scripts/version_manager.py current)
+	git tag v$(shell $(PYTHON) scripts/version_manager.py current)
 
 # Version synchronization
 sync-versions:

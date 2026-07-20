@@ -1,254 +1,164 @@
 #!/usr/bin/env python3
 """
 Version management script for RXNRECer.
-This script provides commands to manage version numbers across the project.
+
+This keeps the public-release version references aligned across packaging,
+CLI output, and lightweight release metadata files.
 """
 
-import os
+from __future__ import annotations
+
+import argparse
 import re
 import sys
-import argparse
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
-# Project root directory
-PROJECT_ROOT = Path(__file__).parent.parent
 
-# Files that contain version numbers
-VERSION_FILES = [
-    "version.py",
-    "rxnrecer/__init__.py", 
-    "README.md",
-    "rxnrecer/cli/predict.py",
-    "scripts/build_and_release.py",
-    "docs/RELEASE_NOTES.md",
-    "docs/INSTALL.md",
-    "ckpt/README.md",
-    "data/README.md"
-]
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-# Markdown-specific version patterns
-MD_VERSION_PATTERNS = [
-    # Main version references
-    (r'\*\*RXNRECer v\d+\.\d+\.\d+\*\*', f'**RXNRECer v{{version}}**'),
-    (r'RXNRECer v\d+\.\d+\.\d+', f'RXNRECer v{{version}}'),
-    (r'Version \d+\.\d+\.\d+', f'Version {{version}}'),
-    (r'v\d+\.\d+\.\d+', f'v{{version}}'),
-    
-    # Installation commands
-    (r'pip install rxnrecer==\d+\.\d+\.\d+', f'pip install rxnrecer=={{version}}'),
-    (r'pip install rxnrecer@\d+\.\d+\.\d+', f'pip install rxnrecer@{{version}}'),
-    
-    # PyPI links
-    (r'https://pypi\.org/project/rxnrecer/\d+\.\d+\.\d+/', f'https://pypi.org/project/rxnrecer/{{version}}/'),
-]
+TEXT_REPLACEMENTS = {
+    "version.py": [
+        (r'BUILD_DATE = "[^"]+"', 'BUILD_DATE = "{build_date}"'),
+    ],
+    "rxnrecer/__init__.py": [
+        (r'__version__ = "[^"]+"', '__version__ = "{version}"'),
+        (r'__version_info__ = \(\d+, \d+, \d+\)', '__version_info__ = ({major}, {minor}, {patch})'),
+        (r'return f"\{__version__\} \([^)]+\)"', 'return f"{{__version__}} ({build_date})"'),
+    ],
+    ".bumpversion.cfg": [
+        (r'^current_version = .+$', 'current_version = {version}'),
+    ],
+    "rxnrecer/cli/predict.py": [
+        (r"version='RXNRECer [^']+'", "version='RXNRECer {version}'"),
+        (r'print\("RXNRECer v[^"]+ - Enzyme Reaction Prediction"\)', 'print("RXNRECer v{version} - Enzyme Reaction Prediction")'),
+    ],
+    "README.md": [
+        (r'\*\*RXNRECer v\d+\.\d+\.\d+\*\*', '**RXNRECer v{version}**'),
+        (r'pip install rxnrecer==\d+\.\d+\.\d+', 'pip install rxnrecer=={version}'),
+        (r'https://pypi\.org/project/rxnrecer/\d+\.\d+\.\d+/', 'https://pypi.org/project/rxnrecer/{version}/'),
+    ],
+    "docs/INSTALL.md": [
+        (r'\*\*Version \d+\.\d+\.\d+\*\*', '**Version {version}**'),
+        (r'pip install rxnrecer==\d+\.\d+\.\d+', 'pip install rxnrecer=={version}'),
+        (r'https://pypi\.org/project/rxnrecer/\d+\.\d+\.\d+/', 'https://pypi.org/project/rxnrecer/{version}/'),
+    ],
+    "ckpt/README.md": [
+        (r'RXNRECer v\d+\.\d+\.\d+', 'RXNRECer v{version}'),
+    ],
+    "data/README.md": [
+        (r'RXNRECer v\d+\.\d+\.\d+', 'RXNRECer v{version}'),
+    ],
+    "setup_scm_example.py": [
+        (r'RXNRECer v\d+\.\d+\.\d+', 'RXNRECer v{version}'),
+    ],
+}
 
-def get_current_version():
-    """Get current version from version.py"""
-    version_file = PROJECT_ROOT / "version.py"
-    with open(version_file, 'r') as f:
-        content = f.read()
-        match = re.search(r'__version__ = "([^"]+)"', content)
-        if match:
-            return match.group(1)
-    return None
 
-def update_version_file(new_version):
-    """Update version.py with new version"""
-    version_file = PROJECT_ROOT / "version.py"
-    
-    with open(version_file, 'r') as f:
-        content = f.read()
-    
-    # Update version
-    content = re.sub(r'__version__ = "[^"]+"', f'__version__ = "{new_version}"', content)
-    
-    # Update version info tuple
-    major, minor, patch = new_version.split('.')
-    content = re.sub(
-        r'__version_info__ = \(\d+, \d+, \d+\)',
-        f'__version_info__ = ({major}, {minor}, {patch})',
-        content
-    )
-    
-    # Update build date
-    build_date = datetime.now().strftime("%Y-%m-%d")
-    content = re.sub(r'BUILD_DATE = "[^"]+"', f'BUILD_DATE = "{build_date}"', content)
-    
-    with open(version_file, 'w') as f:
-        f.write(content)
-    
-    print(f"✅ Updated {version_file} to version {new_version}")
+def validate_version(version: str) -> str:
+    if not SEMVER_RE.match(version):
+        raise ValueError(f"Invalid version format: {version}. Expected X.Y.Z")
+    return version
 
-def update_readme_version(new_version):
-    """Update README.md version references"""
-    readme_file = PROJECT_ROOT / "README.md"
-    
-    with open(readme_file, 'r') as f:
-        content = f.read()
-    
-    # Update main version reference
-    content = re.sub(
-        r'\*\*RXNRECer v\d+\.\d+\.\d+\*\*',
-        f'**RXNRECer v{new_version}**',
-        content
-    )
-    
-    with open(readme_file, 'w') as f:
-        f.write(content)
-    
-    print(f"✅ Updated README.md to version {new_version}")
 
-def update_predict_version(new_version):
-    """Update predict.py version reference"""
-    predict_file = PROJECT_ROOT / "rxnrecer/cli/predict.py"
-    
-    with open(predict_file, 'r') as f:
-        content = f.read()
-    
-    content = re.sub(
-        r'print\(f"RXNRECer v\d+\.\d+\.\d+ - Enzyme Reaction Prediction"\)',
-        f'print(f"RXNRECer v{new_version} - Enzyme Reaction Prediction")',
-        content
-    )
-    
-    with open(predict_file, 'w') as f:
-        f.write(content)
-    
-    print(f"✅ Updated predict.py to version {new_version}")
+def version_parts(version: str) -> tuple[str, str, str]:
+    return tuple(version.split("."))  # type: ignore[return-value]
 
-def update_md_file_version(file_path, new_version):
-    """Update version references in a Markdown file"""
-    if not file_path.exists():
-        print(f"⚠️  File not found: {file_path}")
-        return False
-    
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    original_content = content
-    changes_made = False
-    
-    # Apply all MD version patterns
-    for pattern, replacement_template in MD_VERSION_PATTERNS:
-        replacement = replacement_template.format(version=new_version)
-        new_content = re.sub(pattern, replacement, content)
-        if new_content != content:
-            changes_made = True
-            content = new_content
-    
-    if changes_made:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"✅ Updated {file_path}")
-        return True
-    else:
-        print(f"ℹ️  No changes needed in {file_path}")
+
+def get_current_version() -> str:
+    content = (PROJECT_ROOT / "rxnrecer/__init__.py").read_text(encoding="utf-8")
+    match = re.search(r'__version__ = "([^"]+)"', content)
+    if not match:
+        raise ValueError("Could not determine current version from rxnrecer/__init__.py")
+    return match.group(1)
+
+
+def replace_text(path: Path, replacements: list[tuple[str, str]], values: dict[str, str]) -> bool:
+    if not path.exists():
         return False
 
-def update_all_versions(new_version):
-    """Update all version references across the project"""
-    print(f"🔄 Updating all version references to {new_version}...")
-    
-    # Update core version file
-    update_version_file(new_version)
-    
-    # Update other files
-    update_readme_version(new_version)
-    update_predict_version(new_version)
-    
-    # Update all Markdown files
-    md_files = [f for f in VERSION_FILES if f.endswith('.md')]
-    for md_file in md_files:
-        file_path = PROJECT_ROOT / md_file
-        update_md_file_version(file_path, new_version)
-    
-    print(f"✅ All version references updated to {new_version}")
+    content = path.read_text(encoding="utf-8")
+    updated = content
+    changed = False
 
-def validate_version(version):
-    """Validate version format (semantic versioning)"""
-    pattern = r'^\d+\.\d+\.\d+$'
-    if not re.match(pattern, version):
-        raise ValueError(f"Invalid version format: {version}. Expected format: X.Y.Z")
-    return True
+    for pattern, replacement_template in replacements:
+        replacement = replacement_template.format(**values)
+        new_text = re.sub(pattern, replacement, updated, flags=re.MULTILINE)
+        if new_text != updated:
+            changed = True
+            updated = new_text
 
-def bump_version(part):
-    """Bump version by part (major, minor, patch)"""
-    current = get_current_version()
-    if not current:
-        raise ValueError("Could not determine current version")
-    
-    major, minor, patch = map(int, current.split('.'))
-    
-    if part == 'major':
-        major += 1
-        minor = 0
-        patch = 0
-    elif part == 'minor':
-        minor += 1
-        patch = 0
-    elif part == 'patch':
+    if changed:
+        path.write_text(updated, encoding="utf-8")
+    return changed
+
+
+def update_all_versions(new_version: str) -> None:
+    validate_version(new_version)
+    major, minor, patch = version_parts(new_version)
+    values = {
+        "version": new_version,
+        "major": major,
+        "minor": minor,
+        "patch": patch,
+        "build_date": datetime.now().strftime("%Y-%m-%d"),
+    }
+
+    print(f"Updating version references to {new_version}...")
+    for relpath, replacements in TEXT_REPLACEMENTS.items():
+        path = PROJECT_ROOT / relpath
+        changed = replace_text(path, replacements, values)
+        status = "updated" if changed else "checked"
+        print(f"  - {status}: {relpath}")
+
+
+def bump_version(part: str) -> str:
+    major, minor, patch = map(int, get_current_version().split("."))
+    if part == "major":
+        major, minor, patch = major + 1, 0, 0
+    elif part == "minor":
+        minor, patch = minor + 1, 0
+    elif part == "patch":
         patch += 1
     else:
-        raise ValueError(f"Invalid version part: {part}. Use major, minor, or patch")
-    
-    new_version = f"{major}.{minor}.{patch}"
-    return new_version
+        raise ValueError(f"Invalid version part: {part}")
+    return f"{major}.{minor}.{patch}"
 
-def main():
+
+def main() -> int:
     parser = argparse.ArgumentParser(description="RXNRECer Version Manager")
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
-    # Show current version
-    subparsers.add_parser('current', help='Show current version')
-    
-    # Set specific version
-    set_parser = subparsers.add_parser('set', help='Set specific version')
-    set_parser.add_argument('version', help='Version to set (e.g., 1.4.0)')
-    
-    # Bump version
-    bump_parser = subparsers.add_parser('bump', help='Bump version')
-    bump_parser.add_argument('part', choices=['major', 'minor', 'patch'], 
-                           help='Version part to bump')
-    
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    subparsers.add_parser("current", help="Show current version")
+
+    set_parser = subparsers.add_parser("set", help="Set specific version")
+    set_parser.add_argument("version", help="Version to set, for example 1.4.0")
+
+    bump_parser = subparsers.add_parser("bump", help="Bump version")
+    bump_parser.add_argument("part", choices=["major", "minor", "patch"])
+
     args = parser.parse_args()
-    
-    if args.command == 'current':
-        version = get_current_version()
-        if version:
-            print(f"Current version: {version}")
-        else:
-            print("❌ Could not determine current version")
-            sys.exit(1)
-    
-    elif args.command == 'set':
-        try:
-            validate_version(args.version)
+
+    try:
+        if args.command == "current":
+            print(get_current_version())
+            return 0
+        if args.command == "set":
             update_all_versions(args.version)
-            print(f"\n🎉 Version updated to {args.version}")
-            print("💡 Don't forget to commit and tag the changes:")
-            print(f"   git add .")
-            print(f"   git commit -m 'Bump version to {args.version}'")
-            print(f"   git tag v{args.version}")
-        except ValueError as e:
-            print(f"❌ Error: {e}")
-            sys.exit(1)
-    
-    elif args.command == 'bump':
-        try:
+            return 0
+        if args.command == "bump":
             new_version = bump_version(args.part)
             update_all_versions(new_version)
-            print(f"\n🎉 Version bumped to {new_version}")
-            print("💡 Don't forget to commit and tag the changes:")
-            print(f"   git add .")
-            print(f"   git commit -m 'Bump version to {new_version}'")
-            print(f"   git tag v{new_version}")
-        except ValueError as e:
-            print(f"❌ Error: {e}")
-            sys.exit(1)
-    
-    else:
-        parser.print_help()
+            print(new_version)
+            return 0
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
-if __name__ == '__main__':
-    main()
+    parser.print_help()
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

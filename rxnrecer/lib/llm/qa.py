@@ -1,12 +1,18 @@
-import sys,os
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, f'{project_root}/../')
 import json
+
 import pandas as pd
+
 from rxnrecer.config import config as cfg
-from rxnrecer.utils import file_utils as futils
-from rxnrecer.utils import bio_utils as butils
 from rxnrecer.lib.llm import chat as llmchat
+from rxnrecer.utils import bio_utils as butils
+from rxnrecer.utils import file_utils as futils
+
+
+def dataframe_apply(df, fn, axis=1):
+    apply_fn = getattr(df, "parallel_apply", None)
+    if apply_fn is None:
+        apply_fn = df.apply
+    return apply_fn(fn, axis=axis)
 
 
 def prompt_selector(rxnrecer_s1, rxnrecer_s2):
@@ -55,11 +61,12 @@ def make_query_batch(res_rxnrecer):
     sys_prompt_dict =futils.read_json_file(cfg.FILE_DICT_RXNRECERS3_PROMPT)
     rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
     res_rxnrecer = butils.get_rxn_details_batch(df_rxns=res_rxnrecer, rxn_bank=rxn_bank, rxn_id_column='RXNRECer-S2')
-    res_rxnrecer['prompt_sys'] = res_rxnrecer.parallel_apply(lambda x: prompt_selector(x['RXNRECer-S1'], x['RXNRECer-S2']), axis=1)
-    res_rxnrecer['s3_query'] = res_rxnrecer.parallel_apply(lambda x: make_query_string(x, sys_prompt_dict), axis=1)
+    res_rxnrecer['prompt_sys'] = dataframe_apply(res_rxnrecer, lambda x: prompt_selector(x['RXNRECer-S1'], x['RXNRECer-S2']), axis=1)
+    res_rxnrecer['s3_query'] = dataframe_apply(res_rxnrecer, lambda x: make_query_string(x, sys_prompt_dict), axis=1)
     return res_rxnrecer
 
-def batch_chat(res_rxnrecer, api_key=None, api_url=None, llm_model='openai/gpt-4.1', debug=False):
+def batch_chat(res_rxnrecer, api_key=None, api_url=None, llm_model=None, debug=False):
+    llm_model = llm_model or cfg.LLM_MODEL
     res = make_query_batch(res_rxnrecer)
     res['RXNRECER-S3'] = res.apply(lambda x: single_chat(x.s3_query, llm_model, api_key, api_url, debug)['results'], axis=1)
     res = res[['input_id', 'RXNRECer-S1', 'RXNRECer-S2', 'RXNRECer_with_prob', 'RXN_details', 'RXNRECER-S3']]
@@ -99,4 +106,3 @@ if __name__ == "__main__":
     model2 = 'anthropic/claude-sonnet-4'    
     print('rxnrecer/lib/llm/qa.py')
     
-

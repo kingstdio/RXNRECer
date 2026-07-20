@@ -13,10 +13,11 @@ import os
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 # Version information
-__version__ = "1.3.7"
-__version_info__ = (1, 3, 7)
+__version__ = "1.4.0"
+__version_info__ = (1, 4, 0)
 
 def get_version():
     """Get the version string."""
@@ -28,16 +29,44 @@ def get_version_info():
 
 def get_full_version():
     """Get the full version string with build info."""
-    return f"{__version__} (2025-11-05)"
+    return f"{__version__} (2026-07-20)"
 
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
 __project__ = "RXNRECer"
 __url__ = "https://github.com/kingstdio/RXNRECer"
 
-# Import main components
-from .config import config
-from .cli.predict import main as predict_main
+def get_config() -> Any:
+    """Lazily import and return the config module."""
+    from .config import config
+
+    return config
+
+
+def _run_programmatic_prediction(
+    input_file: str,
+    output_file: str,
+    mode: str = "s1",
+    format: str = "tsv",
+    batch_size: int = 100,
+) -> Any:
+    from .cli.predict import normalize_output_file, save_data, step_by_step_prediction
+
+    output_file = normalize_output_file(output_file, format)
+    result_df = step_by_step_prediction(input_data=input_file, mode=mode, batch_size=batch_size)
+    if result_df is None or result_df.empty:
+        return None
+    save_data(result_df, output_file, format)
+    return result_df
+
+
+def predict_main(*args: Any, **kwargs: Any) -> Any:
+    """Dispatch to CLI entrypoint or programmatic prediction helper."""
+    if args or kwargs:
+        return _run_programmatic_prediction(*args, **kwargs)
+
+    from .cli.predict import main
+    return main(*args, **kwargs)
 
 def check_data_files():
     """

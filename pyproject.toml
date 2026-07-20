@@ -7,7 +7,7 @@ name = "rxnrecer"
 dynamic = ["version"]
 description = "Deep learning framework for predicting enzyme-catalyzed reactions from protein sequences"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
     {name = "RXNRECer Team", email = "contact@rxnrecer.org"}
 ]

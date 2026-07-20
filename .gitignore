@@ -1,6 +1,11 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.pyd.*
 *$py.class
 
 # C extensions
@@ -9,12 +14,15 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+release-worktree/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
 lib/
+!rxnrecer/lib/
+!rxnrecer/lib/**
 lib64/
 parts/
 sdist/
@@ -29,19 +37,22 @@ MANIFEST
 
 # Package/build helper files (keep pyproject.toml tracked)
 # Internal dev helpers not needed by end users
-Makefile
 .bumpversion.cfg
+!.bumpversion.cfg
 setup_scm_example.py
+!setup_scm_example.py
+!scripts/prepare_release_tree.py
+!scripts/release.py
+!scripts/sync_versions.py
+!scripts/update_docs.py
+!scripts/version_manager.py
 .githooks/
-scripts/version_manager.py
-scripts/update_docs.py
-scripts/release.py
-scripts/sync_versions.py
-scripts/build_and_release.py
 .pypirc
 
 # Claude AI assistant files
 .claude/
+.codex
+.codex/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -92,6 +103,40 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb_checkpoints
+
+# Local editor history and sync backups
+.sync_backups/
+.sync_backup/
+**/.history/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.xdv
+*.bcf
+*.run.xml
+*.ilg
+*.ind
+*.idx
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+texput.log
 
 # IPython
 profile_default/
@@ -229,10 +274,83 @@ tmp/
 *.tmp
 *.temp
 
+# Runtime outputs
+results/
+!results/
+!results/README.md
+!results/.gitkeep
+!results/cache/
+!results/cache/.gitkeep
+!results/sample/
+!results/sample/.gitkeep
+logs/runtime/
+logs/slurm/
+
 # Backup files
 *.bak
 *.backup
 *.old
+
+# Local session / scratch files
+SESSION_HISTORY.jsonl
+
+# Large project assets: keep docs/code, do not sync generated/runtime data
+data/**
+!data/
+!data/README.md
+
+ckpt/**
+!ckpt/
+!ckpt/README.md
+
+extools/
+!extools/
+!extools/msa/
+!extools/msa/README.md
+files/
+
+# Legacy and benchmark outputs
+benchmarks/
+
+# Common generated content inside kept source trees
+**/.ipynb_checkpoints/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.nox/
+**/.tox/
+**/*.pyo
+**/*.pyd
+**/*$py.class
+case/**/res/
+case/**/data/pdbs/
+case/**/data/slurm/
+case/**/data/slurm_script/
+
+# Keep repository source trees tracked
+!Makefile
+!config/
+!config/**
+!evaluation/
+!evaluation/**
+!methods/
+!methods/**
+!modules/
+!modules/**
+!preprocessing/
+!preprocessing/**
+!rxnrecer/
+!rxnrecer/**
+!scripts/
+!scripts/**
+!tests/
+!tests/**
+!tools/
+!tools/**
+!docs/
+!docs/**
+!examples/
+!examples/**
 *.orig
 
 # Large data files (but keep essential configs)
@@ -408,7 +526,12 @@ scripts/*.lo
 !examples/*.ipynb
 
 # Development and build related files that users don't need
-__init__.py
 *.sif
 temp/
 *.bak
+*.pyc
+*__pycache__
+*__pycache__/*
+.cursorrules
+AGENTS.md
+pyrightconfig.json

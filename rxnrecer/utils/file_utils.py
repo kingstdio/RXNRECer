@@ -7,11 +7,63 @@ import hashlib
 import json
 import shutil
 import subprocess
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import  Dict,  Any
 from Bio import SeqIO
-from rxnrecer.config import config as cfg
+
+
+FEATHER_META_SUFFIX = ".meta.json"
+
+
+def _get_feather_meta_path(file_path: str) -> str:
+    return f"{file_path}{FEATHER_META_SUFFIX}"
+
+
+def _is_missing_value(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, (dict, list, tuple, np.ndarray)):
+        return False
+    return bool(pd.isna(value))
+
+
+def _should_json_encode_for_feather(series: pd.Series) -> bool:
+    if series.dtype != "object":
+        return False
+    sample = next((value for value in series if not _is_missing_value(value)), None)
+    return isinstance(sample, (dict, list, tuple))
+
+
+def _encode_feather_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, dict[str, str]]]:
+    encoded = df.copy()
+    metadata: dict[str, dict[str, str]] = {}
+    for column in encoded.columns:
+        if not _should_json_encode_for_feather(encoded[column]):
+            continue
+        encoded[column] = encoded[column].apply(
+            lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            if not _is_missing_value(value) else value
+        )
+        metadata[column] = {"encoding": "json"}
+    return encoded, metadata
+
+
+def _decode_feather_dataframe(df: pd.DataFrame, metadata: dict[str, dict[str, str]]) -> pd.DataFrame:
+    decoded = df.copy()
+    for column, info in metadata.items():
+        if column not in decoded.columns or info.get("encoding") != "json":
+            continue
+        decoded[column] = decoded[column].apply(
+            lambda value: json.loads(value) if isinstance(value, str) and value else value
+        )
+    return decoded
+
+
+def _get_cfg():
+    from rxnrecer.config import config as cfg
+    return cfg
 
 def get_project_root() -> Path:
     """
@@ -202,12 +254,13 @@ def save_dataframe(df: pd.DataFrame, output_file: str,
     elif output_format == 'json':
         df.to_json(output_file, orient='records', indent=2)
     elif output_format == 'feather':
-        df.to_feather(output_file)
+        encoded_df, metadata = _encode_feather_dataframe(df)
+        encoded_df.to_feather(output_file)
     else:
         raise ValueError(f"Unsupported output format: {output_format}")
 
 
-def load_dataframe(file_path: str, file_format: str = None) -> pd.DataFrame:
+def load_dataframe(file_path: str, file_format: str = '.csv') -> pd.DataFrame:
     """
     Load DataFrame from file.
     
@@ -218,8 +271,6 @@ def load_dataframe(file_path: str, file_format: str = None) -> pd.DataFrame:
     Returns:
         Loaded DataFrame
     """
-    if file_format is None:
-        file_format = Path(file_path).suffix.lower()
     
     if file_format in ['.tsv', '.txt']:
         return pd.read_csv(file_path, sep='\t')
@@ -228,7 +279,8 @@ def load_dataframe(file_path: str, file_format: str = None) -> pd.DataFrame:
     elif file_format == '.json':
         return pd.read_json(file_path)
     elif file_format == '.feather':
-        return pd.read_feather(file_path)
+        df = pd.read_feather(file_path)
+        return df
     else:
         raise ValueError(f"Unsupported file format: {file_format}")
 
@@ -385,7 +437,7 @@ def get_cache_filename(input_file, mode, output_format):
 
 def check_cache(cache_filename):
     """Check if cache exists, return cache file path if exists"""
-    
+    cfg = _get_cfg()
     cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
     # Create cache directory
     
@@ -403,6 +455,7 @@ def check_cache(cache_filename):
 def save_to_cache(cache_data,cache_filename):
     """Save results to cache"""
     try:
+        cfg = _get_cfg()
         cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
         cache_data.to_pickle(cache_file)
     except Exception as e:
@@ -411,6 +464,7 @@ def save_to_cache(cache_data,cache_filename):
 def load_from_cache(cache_filename):
     """Load results from cache"""
     try:
+        cfg = _get_cfg()
         cache_file = f'{cfg.CACHE_DIR}{cache_filename}.pkl'
         return pd.read_pickle(cache_file)
     except Exception as e:
@@ -430,6 +484,7 @@ def clear_cache(cache_filename=None, older_than_days=None):
         int: Number of deleted files
     """
     try:
+        cfg = _get_cfg()
         deleted_count = 0
         
         if cache_filename:
@@ -486,6 +541,7 @@ def get_cache_info():
         dict: Dictionary containing cache statistics
     """
     try:
+        cfg = _get_cfg()
         if not os.path.exists(cfg.CACHE_DIR):
             return {
                 'cache_dir': cfg.CACHE_DIR,

@@ -1,22 +1,45 @@
 import sys
 import os
-from rxnrecer.config import config as cfg
-import pandas as pd
-import numpy as np
 import time
 from types import SimpleNamespace
-import torch
 import argparse
-from rxnrecer.lib.ml import mlpredict as predRXN
-from rxnrecer.lib.llm import qa as llm_qa
-from rxnrecer.utils import file_utils as ftool
-from rxnrecer.utils import format_utils
-from rxnrecer.utils import bio_utils as butils
-from tqdm import tqdm
 from collections import defaultdict
-from rxnrecer.lib.model import mactive as Mactive
+import tempfile
+from typing import Any
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import get_context
 
-def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
+import torch
+
+from rxnrecer.utils import file_utils as ftool
+from rxnrecer.utils import bio_utils as butils
+from rxnrecer.lib.llm import qa as llm_qa
+from rxnrecer.lib.model import mactive as Mactive
+from rxnrecer.utils import format_utils
+
+if __package__ in {None, ""}:
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+
+from rxnrecer.config import config as cfg
+
+def load_model(model_weight_path=None, device=None):
+    
+    
+    from rxnrecer.lib.model import mactive as Mactive
+
+    if model_weight_path is None:
+        model_weight_path = cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL
+
+    if device is None:
+        resolved_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        resolved_device = torch.device(device)
+
     mcfg = SimpleNamespace(
     # Model parameters
     batch_size=1,
@@ -26,7 +49,7 @@ def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
     dropout_rate=0.2,
     freeze_esm_layers = 32, # Number of frozen layers
     output_dimensions=10479,
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    device = resolved_device,
     model_weight_path=model_weight_path,
     dict_path = cfg.FILE_DS_DICT_ID2RXN
     )
@@ -47,7 +70,9 @@ def load_model(model_weight_path= cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL):
 
 
 # region 1. Load computation data
-def load_data(input_data):
+def load_data(input_data) -> pd.DataFrame:
+
+
     """
     Load computation data, supports two input formats:
       1) Pass FASTA file path (str) -> auto parse to DataFrame
@@ -75,69 +100,181 @@ def load_data(input_data):
 
 
 #region 2. Save results
-def save_data(resdf, output_file, output_format='tsv'):
+def normalize_output_file(output_file, output_format) -> str:
+    """Return an output path whose suffix matches the selected format."""
+    expected_suffix = f".{output_format}"
+    root, suffix = os.path.splitext(output_file)
+
+    if suffix.lower() == expected_suffix:
+        return output_file
+
+    if suffix.lower() in {".tsv", ".json"}:
+        return root + expected_suffix
+
+    return output_file + expected_suffix
+
+
+def save_data(resdf: pd.DataFrame, output_file: str, output_format='tsv') -> None:
+
     """
     Save results to file (TSV/JSON)
     resdf: Result DataFrame
     output_file: Output file path
     output_format: 'tsv' or 'json'
     """
-    resdf = resdf.applymap(lambda x: butils.format_obj(x, 4))
+    output_dir = os.path.dirname(output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    def _atomic_write(writer, suffix):
+        fd, temp_path = tempfile.mkstemp(dir=output_dir or None, suffix=suffix)
+        os.close(fd)
+        try:
+            writer(temp_path)
+            os.replace(temp_path, output_file)
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def format_cell(x):
+        return butils.format_obj(x, 4)
+
+    resdf = resdf.applymap(format_cell)
     if output_format == 'tsv':
         resdf[["reaction_ec", "reaction_equation", "reaction_equation_ref_chebi"]] = resdf['rxn_details'].apply(butils.simplify_rxn_details_fields).apply(pd.Series)
         resdf = resdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob', 'reaction_ec', 'reaction_equation', 'reaction_equation_ref_chebi']]
-        resdf.to_csv(output_file, index=False, sep='\t', float_format="%.4f")
+        def _write_tsv(path):
+            with open(path, "w", encoding="utf-8") as handle:
+                resdf.to_csv(handle, index=False, sep='\t', float_format="%.4f")
+                handle.flush()
+                os.fsync(handle.fileno())
+        _atomic_write(_write_tsv, ".tsv")
     elif output_format == 'json':
-        resdf.to_json(output_file, orient='records', indent=4)
+        def _write_json(path):
+            with open(path, "w", encoding="utf-8") as handle:
+                resdf.to_json(handle, orient='records', indent=4)
+                handle.flush()
+                os.fsync(handle.fileno())
+        _atomic_write(_write_json, ".json")
     else:
         print(f'Error: Invalid output format {output_format}. Skip saving.')
 # endregion 
 
 
+def _split_chunks_even(indexed_df: pd.DataFrame, num_chunks: int) -> list[pd.DataFrame]:
+    return [chunk.copy() for chunk in np.array_split(indexed_df, num_chunks) if not chunk.empty]
 
-def step_by_step_prediction(input_data, mode='s1', batch_size=100):
-    
+
+def _split_chunks_by_sequence_length(indexed_df: pd.DataFrame, num_chunks: int) -> list[pd.DataFrame]:
+    work_df = indexed_df.copy()
+    work_df["_seq_len"] = work_df["seq"].fillna("").astype(str).str.len()
+    work_df = work_df.sort_values("_seq_len", ascending=False).reset_index(drop=True)
+    buckets = [[] for _ in range(num_chunks)]
+    bucket_lengths = [0] * num_chunks
+
+    for _, row in work_df.iterrows():
+        bucket_idx = min(range(num_chunks), key=lambda idx: bucket_lengths[idx])
+        buckets[bucket_idx].append(row.to_dict())
+        bucket_lengths[bucket_idx] += int(row["_seq_len"])
+
+    chunks = []
+    for bucket in buckets:
+        if not bucket:
+            continue
+        chunk_df = pd.DataFrame(bucket).drop(columns=["_seq_len"])
+        chunks.append(chunk_df.reset_index(drop=True))
+    return chunks
+
+
+def _build_prediction_chunks(input_df: pd.DataFrame, num_chunks: int, split_mode: str = "balanced_length") -> list[pd.DataFrame]:
+    indexed_df = input_df.reset_index(drop=False).rename(columns={"index": "_orig_idx"})
+    if split_mode == "even":
+        return _split_chunks_even(indexed_df, num_chunks)
+    return _split_chunks_by_sequence_length(indexed_df, num_chunks)
+
+
+def _print_chunk_stats(chunks: list[pd.DataFrame], devices: list[str], split_mode: str) -> None:
+    print(f"[predict] split_mode={split_mode}")
+    for device_name, chunk in zip(devices, chunks):
+        seq_len = chunk["seq"].fillna("").astype(str).str.len()
+        print(
+            f"[predict] {device_name}: samples={len(chunk)} "
+            f"total_len={int(seq_len.sum())} max_len={int(seq_len.max()) if len(seq_len) else 0}"
+        )
+
+
+def _predict_chunk_worker(
+    input_df: pd.DataFrame,
+    model_weight_path: str,
+    mode: str,
+    batch_size: int,
+    rxn_details: bool,
+    device: str,
+    progress_desc: str | None = None,
+    progress_position: int | None = None,
+) -> pd.DataFrame:
+    model, mcfg = load_model(model_weight_path=model_weight_path, device=device)
+    return single_batch_run_prediction(
+        input_df=input_df,
+        model=model,
+        mcfg=mcfg,
+        mode=mode,
+        batch_size=batch_size,
+        rxn_details=rxn_details,
+        show_progress=True,
+        progress_desc=progress_desc,
+        progress_position=progress_position,
+        devices=None,
+    ).drop_duplicates(subset=["input_id"], keep="first")
+
+
+def step_by_step_prediction(input_data, mode='s1', batch_size=100,  rxn_details=True, devices=None, split_mode="balanced_length") -> pd.DataFrame:
     if mode == 's3':
         if not cfg.LLM_API_KEY or not cfg.LLM_API_URL:
             print("Error: LLM API key and URL are required for S3 mode!")
-            return
+            return pd.DataFrame()
     
     input_df = load_data(input_data)
     print(f'Step 1: Preparing input data, loading {len(input_df)} proteins')
 
     # Step 2: Load predictive model
-    print(f'Step 2: Loading predictive model')
+    print('Step 2: Loading predictive model')
     model, mcfg = load_model(model_weight_path=cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL) 
-    
-        
-    res = []
-    
+
     print(f'Step 3: Running prediction on {len(input_df)} proteins')
-    # Total number of batches needed (rounding up for incomplete batches)
-    batch_num = (len(input_df) + batch_size - 1) // batch_size
-    
-    for i in tqdm(range(batch_num)):
-        # Calculate batch start and end indices
-        start = i * batch_size
-        end = min((i + 1) * batch_size, len(input_df))  # Ensure the last batch is handled correctly
-        
-        # Slice the input_data
-        batch_data = input_df.iloc[start:end]
-        
-        # If the batch is non-empty, run prediction
-        if not batch_data.empty:
-            res_batch = single_batch_run_prediction(batch_data, model=model, mcfg=mcfg, mode=mode)
-            res = res + [res_batch]  # Use extend for better performance
-    fres = pd.concat(res, axis=0, ignore_index=True)
-            
+    if input_df.empty:
+        return pd.DataFrame()
+
+    fres = single_batch_run_prediction(
+        input_df=input_df,
+        model=model,
+        mcfg=mcfg,
+        mode=mode,
+        batch_size=batch_size,
+        rxn_details=rxn_details,
+        devices=devices,
+        split_mode=split_mode,
+    )
     fres = fres.drop_duplicates(subset=['input_id'], keep='first')
-    # fres = input_df.rename(columns={'uniprot_id':'input_id'}).merge(fres, on='input_id', how='left')
     return fres
     
 
 
 #region RXNRECer Prediction API
-def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
+def single_batch_run_prediction(
+    input_df: pd.DataFrame,
+    model: Any,
+    mcfg: SimpleNamespace,
+    mode='s1',
+    batch_size=2,
+    rxn_details=True,
+    show_progress=True,
+    progress_desc=None,
+    progress_position=None,
+    devices=None,
+    split_mode="balanced_length",
+) -> pd.DataFrame:
+
     """
     Perform RXNRECer prediction on input DataFrame and return prediction results.
     Args:
@@ -147,15 +284,56 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
       - mode: Prediction mode ('s1' or 's2')
     """
     input_df = input_df.reset_index(drop=True)
+    if devices is not None and not isinstance(devices, str):
+        device_list = [item for item in devices if item]
+        if len(device_list) > 1:
+            chunks = _build_prediction_chunks(input_df=input_df, num_chunks=len(device_list), split_mode=split_mode)
+            _print_chunk_stats(chunks, device_list, split_mode)
+
+            with ProcessPoolExecutor(max_workers=len(chunks), mp_context=get_context("spawn")) as executor:
+                futures = [
+                    executor.submit(
+                        _predict_chunk_worker,
+                        chunk[["uniprot_id", "seq"]],
+                        mcfg.model_weight_path,
+                        mode,
+                        batch_size,
+                        rxn_details,
+                        device_name,
+                        f"Predicting on {device_name}",
+                        worker_idx,
+                    )
+                    for worker_idx, (chunk, device_name) in enumerate(zip(chunks, device_list))
+                ]
+
+                result_frames = []
+                for chunk, future in zip(chunks, futures):
+                    result_frame = future.result()
+                    result_frame = result_frame.merge(
+                        chunk[["_orig_idx", "uniprot_id"]].rename(columns={"uniprot_id": "input_id"}),
+                        on="input_id",
+                        how="left",
+                    )
+                    result_frames.append(result_frame)
+
+            return (
+                pd.concat(result_frames, axis=0, ignore_index=True)
+                .sort_values("_orig_idx")
+                .drop(columns=["_orig_idx"])
+                .reset_index(drop=True)
+            )
     # RXNRECer-S1
-    print('Running RXNRECer-S1 ...')
+    # print('Running RXNRECer-S1 ...')
     res, res_prob = Mactive.predict_sequences(
         model=model,
         sequences=input_df.seq,
         model_weight_path=mcfg.model_weight_path,
         dict_path=mcfg.dict_path,
-        batch_size=2,
-        device=mcfg.device
+        batch_size=batch_size,
+        device=mcfg.device,
+        show_progress=show_progress,
+        progress_desc=progress_desc,
+        progress_position=progress_position,
     )
     # Integrate prediction results
     res_df_s1 = input_df[['uniprot_id']].reset_index(drop=True).copy()
@@ -163,12 +341,17 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
     res_df_s1['RXNRECer_with_prob'] = res_prob
     res_df_s1 = res_df_s1.rename(columns={'uniprot_id': 'input_id'})
     
+    res_df_s1 = refine_prediction_table(res_df_s1)
+    
     if mode == 's1':
         # Get reaction details
         rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
         res_df_s1= butils.get_rxn_details_batch(df_rxns=res_df_s1, rxn_bank=rxn_bank, rxn_id_column='RXNRECer')
-        res_df_s1['rxn_details'] = res_df_s1.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
-        res_df_s1 = res_df_s1[['input_id','RXNRECer', 'RXNRECer_with_prob', 'rxn_details']]
+        if rxn_details:
+            res_df_s1['rxn_details'] = res_df_s1.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
+            res_df_s1 = res_df_s1[['input_id','RXNRECer', 'RXNRECer_with_prob', 'rxn_details']]
+        else:
+            res_df_s1 = res_df_s1[['input_id','RXNRECer', 'RXNRECer_with_prob']]
         return res_df_s1
 
 
@@ -180,8 +363,11 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         rxn_bank = pd.read_feather(cfg.FILE_RHEA_REACTION)
         res_df_s2= butils.get_rxn_details_batch(df_rxns=res_df_s2, rxn_bank=rxn_bank, rxn_id_column='RXNRECer')
         # Format output
-        res_df_s2['rxn_details'] = res_df_s2.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
-        res_df_s2 = res_df_s2[['input_id','RXNRECer', 'RXNRECer_with_prob', 'rxn_details']]
+        if rxn_details:
+            res_df_s2['rxn_details'] = res_df_s2.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, RXN_details=x.RXN_details, mode='s2'), axis=1).tolist()
+            res_df_s2 = res_df_s2[['input_id','RXNRECer', 'RXNRECer_with_prob', 'rxn_details']]
+        else:
+            res_df_s2 = res_df_s2[['input_id','RXNRECer', 'RXNRECer_with_prob']]
         return res_df_s2
     
     if mode == 's3':
@@ -189,7 +375,7 @@ def single_batch_run_prediction(input_df, model, mcfg,  mode='s1'):
         res_df_s2 = get_ensemble(input_df=input_df[['uniprot_id', 'seq']], rxnrecer_df=res_df_s1).rename(columns={'RXNRECer': 'RXNRECer-S2'})
         s3_input_df = res_df_s2.merge(res_df_s1[['input_id', 'RXNRECer']].rename(columns={'RXNRECer': 'RXNRECer-S1'}), on='input_id', how='left'
                             ).merge(input_df.rename(columns={'uniprot_id': 'input_id'}), on='input_id', how='left')
-        res_df_s3 = llm_qa.batch_chat(res_rxnrecer=s3_input_df, api_key=cfg.LLM_API_KEY, api_url=cfg.LLM_API_URL)
+        res_df_s3 = llm_qa.batch_chat(res_rxnrecer=s3_input_df, api_key=cfg.LLM_API_KEY, api_url=cfg.LLM_API_URL, llm_model=cfg.LLM_MODEL)
         res_df_s3['rxn_details'] = res_df_s3.apply(lambda x: format_utils.format_rxn_output(RXNRECer_with_prob=x.RXNRECer_with_prob, 
                                                                                             RXNRECER_S3=x['RXNRECER-S3'], 
                                                                                             RXN_details=x.RXN_details, mode='s3'), axis=1)
@@ -207,6 +393,8 @@ def res_refinement(rxn_prob):
     2. If '-' has highest probability -> non-enzyme, keep '-'
     3. If '-' has lower probability -> remove '-'
     """
+    from rxnrecer.config import config as cfg
+
     if len(rxn_prob) == 1:
         return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
 
@@ -221,10 +409,37 @@ def res_refinement(rxn_prob):
         rxn_prob.pop('-')
 
     return cfg.SPLITER.join(rxn_prob.keys()), rxn_prob
+
+
+def refine_prediction_table(
+    res_df: pd.DataFrame,
+    rxn_col: str = "RXNRECer",
+    prob_col: str = "RXNRECer_with_prob",
+) -> pd.DataFrame:
+    """统一清理预测结果里的酶/非酶冲突。
+
+    允许的合法状态只有两种：
+    1. 只有 `-`
+    2. 一个或多个真实反应，不包含 `-`
+
+    因此如果同一条预测里同时出现 `-` 和真实反应：
+    - 若 `-` 概率最高，则整条视为非酶，只保留 `-`
+    - 否则删除 `-`，保留真实反应
+    """
+    working = res_df.copy()
+    working[[rxn_col, prob_col]] = working.apply(
+        lambda row: pd.Series(res_refinement(dict(row[prob_col]))),
+        axis=1,
+    )
+    return working
 # endregion
 
 
 def get_ensemble(input_df, rxnrecer_df):
+    import pandas as pd
+    from rxnrecer.config import config as cfg
+    from rxnrecer.lib.ml import mlpredict as predRXN
+
     """
     Ensemble multiple methods for protein reaction prediction and handle enzyme/non-enzyme mixed cases.
 
@@ -236,11 +451,28 @@ def get_ensemble(input_df, rxnrecer_df):
     - res_df: DataFrame with input_id, ensemble prediction string (RXNRECer) and probability dict (RXNRECer_with_prob)
     """
 
+    def _fallback_rxn_frame(column_name):
+        return input_df[["uniprot_id"]].assign(**{column_name: "NO-PREDICTION"})
+
+    def _fallback_similarity_frame():
+        empty_prediction = [[("-", 0.0)]]
+        frame = input_df[["uniprot_id"]].copy()
+        frame["esm"] = empty_prediction * len(frame)
+        frame["t5"] = empty_prediction * len(frame)
+        return frame
+
+    def _run_or_fallback(label, fn, fallback_factory):
+        try:
+            return fn()
+        except Exception as exc:
+            print(f"Warning: {label} failed, fallback to NO-PREDICTION. Reason: {exc}")
+            return fallback_factory()
+
     # Call various prediction methods (MSA, CatFam, ECRECer, T5, RXNRECer)
-    res_msa = predRXN.getmsa(df_test=input_df, k=1)
-    res_catfam = predRXN.getcatfam(df_test=input_df)
-    res_ecrecer = predRXN.getecrecer(df_test=input_df)
-    res_t5 = predRXN.getT5(df_test=input_df, topk=1)
+    res_msa = _run_or_fallback("MSA", lambda: predRXN.getmsa(df_test=input_df, k=1), lambda: _fallback_rxn_frame("rxn_msa"))
+    res_catfam = _run_or_fallback("CatFam", lambda: predRXN.getcatfam(df_test=input_df), lambda: _fallback_rxn_frame("rxn_catfam"))
+    res_ecrecer = _run_or_fallback("ECRECer", lambda: predRXN.getecrecer(df_test=input_df), lambda: _fallback_rxn_frame("rxn_ecrecer"))
+    res_t5 = _run_or_fallback("T5", lambda: predRXN.getT5(df_test=input_df, topk=1), _fallback_similarity_frame)
     res_rxnrecer = rxnrecer_df.copy().rename(columns={'input_id': 'uniprot_id'})
 
     # Merge different model results into same DataFrame (left join on uniprot_id)
@@ -280,14 +512,7 @@ def get_ensemble(input_df, rxnrecer_df):
     # Keep only required output fields
     res_df = baggingdf[['input_id', 'RXNRECer', 'RXNRECer_with_prob']].copy()
 
-    # Clean enzyme/non-enzyme mixed cases (remove invalid or conflicting '-' labels)
-    res_df[['RXNRECer', 'RXNRECer_with_prob']] = res_df.apply(
-        lambda row: pd.Series(res_refinement(dict(row['RXNRECer_with_prob']))),
-        axis=1
-    )
-
-
-    return res_df
+    return refine_prediction_table(res_df)
     
 
 def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
@@ -366,6 +591,9 @@ def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
 
 def main():
     """Main function for command line interface"""
+    from rxnrecer.config import config as cfg
+    from rxnrecer.utils import file_utils as ftool
+
     start_time = time.perf_counter()
     
     # 1. 解析命令行参数
@@ -390,10 +618,10 @@ Examples:
     
     parser.add_argument('-i', '--input_fasta', type=str, default=f'{cfg.DATA_ROOT}sample/sample10.fasta', help='Path to input FASTA file (required)')
     parser.add_argument('-o', '--output_file', type=str, default=f'{cfg.TEMP_DIR}res_sample10.tsv', help='Path to output file (default: temp/res_sample10.tsv)')
-    parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='json', help='Output format: tsv or json (default: tsv)')
+    parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='tsv', help='Output format: tsv or json (default: tsv)')
     parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
     parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
-    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.3.7')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.4.0')
     
     # 显示帮助信息
     if len(sys.argv) == 1:
@@ -401,6 +629,7 @@ Examples:
         return
     
     args = parser.parse_args()
+    args.output_file = normalize_output_file(args.output_file, args.format)
     
     # 2. 验证输入参数
     if not args.input_fasta:
@@ -419,7 +648,7 @@ Examples:
         os.makedirs(output_dir)
     
     # 4. 显示运行信息
-    print(f"RXNRECer v1.3.7 - Enzyme Reaction Prediction")
+    print("RXNRECer v1.4.0 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")
@@ -461,7 +690,7 @@ Examples:
         
         # 10. 完成
         elapsed_time = time.perf_counter() - start_time
-        print(f"✅ Prediction completed successfully!")
+        print("✅ Prediction completed successfully!")
         print(f"⏱️  Total time: {elapsed_time:.2f} seconds")
         print(f"📁 Results saved to: {args.output_file}")
         

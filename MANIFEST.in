@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include version.py
+include setup_scm_example.py
+include .bumpversion.cfg
+recursive-include docs *.md
+recursive-include examples *.md *.py
+recursive-include results *.md .gitkeep
+recursive-include extools/msa *.md

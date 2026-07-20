@@ -1,26 +1,12 @@
-# 使用 setuptools_scm 的示例配置
-# 这种方法会自动从 git 标签生成版本号
+"""Compatibility placeholder kept for public release layout stability.
 
-# pyproject.toml 配置示例:
-"""
-[build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "rxnrecer"
-dynamic = ["version"]
-
-[tool.setuptools_scm]
-write_to = "rxnrecer/_version.py"
-version_scheme = "python-simplified-semver"
-local_scheme = "dirty-tag"
-
-[tool.setuptools.dynamic]
-version = {attr = "rxnrecer._version:version"}
+The current package version is managed through ``pyproject.toml`` and
+``rxnrecer.__version__``. This file remains in the release tree so existing
+users of older release layouts do not see an unnecessary structural change.
 """
 
-# 使用方式:
-# 1. 创建 git 标签: git tag v1.3.0
-# 2. 版本号自动从标签生成
-# 3. 开发版本自动添加 .dev0+hash
+from rxnrecer import __version__
+
+
+def get_release_version() -> str:
+    return f"RXNRECer v{__version__}"

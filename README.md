@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/badge/PyPI-rxnrecer-blue.svg)](https://pypi.org/project/rxnrecer/)
 
-**RXNRECer v1.3.7** is a deep learning framework for predicting enzyme-catalyzed reactions directly from protein sequences.
+**RXNRECer v1.4.0** is a deep learning framework for predicting enzyme-catalyzed reactions directly from protein sequences.
 It is the official implementation of  
 **“RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction.”**
 
@@ -24,21 +24,36 @@ It is the official implementation of
 - **GPU acceleration** with CUDA support
 - **Easy-to-use CLI** for large-scale batch inference
 - **Smart caching** for efficient repeated predictions
+- **Web/API deployment notes** for integrating RXNRECer outputs into a browser or service workflow
 
 ---
 
 ## 📋 System Requirements
 
 - **Python**: 3.10+
-- **PyTorch**: 2.0+
-- **CUDA**: 11.0+ (recommended, GPU optional)
+- **NumPy**: 1.21 to <2.0 (current compatibility range)
+- **PyTorch/CUDA**: use a CUDA-enabled PyTorch build compatible with the installed NVIDIA GPU and driver; S1 can also run on CPU
 - **Memory**: ≥32 GB RAM
 - **Disk space**: ≥40 GB (for data and model files)
+- **Container runtime**: Apptainer or SingularityCE is required for the complete S2 workflow because the CatFam and ECRECer components are distributed as `.sif` images. It is not required for S1.
+- **Stage-specific hardware**: S1, S2, and S3 support both CPU execution and GPU acceleration. For S2 prediction on a GPU, at least 16 GB VRAM is recommended.
 
-### Tested Environments
-- Ubuntu 20.04 / 22.04
-- Python 3.10, 3.11
-- PyTorch 2.x with CUDA 11.x / 12.x
+### S2 Dependencies
+
+The complete RXNRECer-S2 workflow depends on [Apptainer](https://apptainer.org/) or [SingularityCE](https://sylabs.io/singularity/) to run the bundled CatFam and ECRECer container images:
+
+```text
+extools/ec/catfam.sif
+extools/ec/ecrecer.sif
+```
+
+Download these images with `rxnrecer-download-data --extools-only` and confirm that the `singularity` command is available before running `-m s2`. S1 does not require Apptainer/Singularity. S3 runs S2 before the LLM step and therefore has the same S2 dependencies.
+
+### Compatibility
+
+Dependency compatibility is validated for each release rather than tied to one permanent PyTorch/CUDA combination. Consult the current package metadata and release notes when installing or upgrading, especially on newer GPU architectures.
+
+See the [Installation Guide](docs/INSTALL.md) for the validated environment profile, container-runtime checks, hardware requirements, and reproducibility guidance.
 
 ---
 
@@ -55,10 +70,11 @@ It is the official implementation of
 
 ```bash
 # Install from PyPI
-pip install rxnrecer
+python -m pip install "numpy>=1.21,<2.0" rxnrecer
 
 # Or install the latest version from GitHub
-pip install git+https://github.com/kingstdio/RXNRECer.git
+python -m pip install "numpy>=1.21,<2.0" git+https://github.com/kingstdio/RXNRECer.git
+```
 
 ### 2. Download Data
 
@@ -71,6 +87,20 @@ rxnrecer-download-data --data-only      # ~8.8GB
 rxnrecer-download-data --models-only    # ~14GB
 rxnrecer-download-data --extools-only   # ~13GB
 ```
+
+### S2/S3 Container Setup
+
+The complete S2 workflow runs CatFam and ECRECer from the downloaded `.sif` images. Install [Apptainer](https://apptainer.org/docs/admin/main/installation.html) or [SingularityCE](https://docs.sylabs.io/guides/master/admin-guide/installation.html), then download and check the external tools:
+
+```bash
+rxnrecer-download-data --extools-only
+singularity --version
+singularity inspect extools/ec/catfam.sif
+singularity inspect extools/ec/ecrecer.sif
+singularity exec --nv extools/ec/ecrecer.sif nvidia-smi
+```
+
+S1 does not use these containers. S3 runs S2 before the LLM step and therefore uses the same container setup. See [Container Runtime Setup](docs/INSTALL.md#container-runtime-setup-for-s2s3) for Apptainer compatibility, GPU checks, and troubleshooting.
 
 ### 3. Run Prediction
 
@@ -93,6 +123,15 @@ rxnrecer -i input.fasta -o output.json -m s3 -f json
 
 Note: The demo focuses on inference and usage examples. Full benchmarking from the paper requires extra datasets and scripts described in the Methods section.
 
+## 🌐 Public Webserver
+
+RXNRECer is also available as a public webserver:
+
+**https://rxnrecer.biodesign.ac.cn/**
+
+The webserver provides a browser-based interface for users who want to test RXNRECer without installing the package locally. It supports the same typical workflow: submit protein sequences, run RXNRECer prediction, and review reaction-level outputs and supporting information through the web interface.
+
+For large-scale batch inference, reproducible local runs, or integration into custom pipelines, use the PyPI package through the command-line interface or Python API. See **[Webserver and Local Usage](docs/WEB_API_DEPLOYMENT.md)** for how the public webserver relates to the CLI/Python workflow.
 
 ## 🔧 Usage
 
@@ -239,28 +278,28 @@ RXNRECer/                               # Project root (release)
 
 ## 🔧 Configuration
 
-For S3 mode (LLM reasoning), set your API key:
+For S3 mode, configure an OpenAI-compatible chat-completions endpoint. This can be a hosted provider, an institutional gateway, or a local server such as vLLM or SGLang.
 
 ```bash
 export LLM_API_KEY="your_api_key_here"
-export LLM_API_URL="your_api_url_here"
+export LLM_API_URL="https://api.example.com/v1"
+export LLM_MODEL="provider/model-version"
 ```
 
-**Examples:**
+The model name should match the exact identifier exposed by your provider or local server. If `LLM_MODEL` is not set, RXNRECer uses its package default.
+
+For local OpenAI-compatible servers:
 
 ```bash
-# OpenRouter
-export LLM_API_KEY="sk-or-v1-your_openrouter_key_here"
-export LLM_API_URL="https://openrouter.ai/api/v1"
-
-# OpenAI
-export LLM_API_KEY="sk-your_openai_key_here"
-export LLM_API_URL="https://api.openai.com/v1"
-
-# Anthropic
-export LLM_API_KEY="sk-ant-your_anthropic_key_here"
-export LLM_API_URL="https://api.anthropic.com"
+# vLLM or SGLang local server
+export LLM_API_URL="http://127.0.0.1:8000/v1"
+export LLM_API_KEY="EMPTY"
+export LLM_MODEL="local-rxnrecer-llm"
 ```
+
+See **[LLM API Setup](docs/LLM_API_SETUP.md)** for hosted-provider examples, local vLLM/SGLang setup, model-version selection, reproducibility notes, and troubleshooting. For general provider-side API key and endpoint setup, the AIML API documentation (<https://docs.aimlapi.com/>) is also a useful reference.
+
+S3 explanations are intended as human-readable evidence summaries for expert interpretation. They should not be treated as experimental validation or as ground-truth benchmark labels.
 
 ### Jupyter Notebook Setup
 
@@ -270,7 +309,8 @@ from rxnrecer.config import config as cfg
 
 # Set your API credentials
 cfg.LLM_API_KEY = "your_api_key_here"
-cfg.LLM_API_URL = "your_api_url_here"
+cfg.LLM_API_URL = "https://api.example.com/v1"
+cfg.LLM_MODEL = "provider/model-version"
 ```
 
 ## 📦 Installation Options
@@ -290,6 +330,8 @@ pip install git+https://github.com/kingstdio/RXNRECer.git
 ## 📚 Documentation
 
 - **[Installation Guide](docs/INSTALL.md)** - Detailed setup instructions
+- **[LLM API Setup](docs/LLM_API_SETUP.md)** - S3 provider, local vLLM/SGLang, model-version, and reproducibility settings
+- **[Webserver and Local Usage](docs/WEB_API_DEPLOYMENT.md)** - Public webserver access and the CLI/Python workflow
 - **[Release Notes](docs/RELEASE_NOTES.md)** - Version information
 
 ## 🤝 Contributing
@@ -313,7 +355,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 **🎯 Get started now with: `pip install rxnrecer`**
-
-
-
-
