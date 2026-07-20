@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any
 
 # Version information
-__version__ = "1.4.0"
-__version_info__ = (1, 4, 0)
+__version__ = "1.4.1"
+__version_info__ = (1, 4, 1)
 
 def get_version():
     """Get the version string."""

@@ -34,6 +34,17 @@ def load_model(model_weight_path=None, device=None):
 
     if model_weight_path is None:
         model_weight_path = cfg.FILE_MOLEL_PRODUCTION_BEST_MODEL
+    if not os.path.exists(model_weight_path):
+        fallback_path = os.path.join(
+            os.path.dirname(model_weight_path),
+            "production_185846best.pth",
+        )
+        if os.path.exists(fallback_path):
+            print(
+                f"Model checkpoint not found: {model_weight_path}. "
+                f"Falling back to {fallback_path}"
+            )
+            model_weight_path = fallback_path
 
     if device is None:
         resolved_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -621,7 +632,7 @@ Examples:
     parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='tsv', help='Output format: tsv or json (default: tsv)')
     parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
     parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
-    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.4.0')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.4.1')
     
     # 显示帮助信息
     if len(sys.argv) == 1:
@@ -648,7 +659,7 @@ Examples:
         os.makedirs(output_dir)
     
     # 4. 显示运行信息
-    print("RXNRECer v1.4.0 - Enzyme Reaction Prediction")
+    print("RXNRECer v1.4.1 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")

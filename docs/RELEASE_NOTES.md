@@ -1,5 +1,17 @@
 # RXNRECer Release Notes
 
+## Version 1.4.1 - Pip Smoke-Test Compatibility Fixes
+
+**Release Date**: July 20, 2026  
+**Status**: Production Ready
+
+### Fixes
+
+- Constrained package metadata to `numpy>=1.21.0,<2.0` to match the documented validated environment.
+- Added checkpoint filename fallback from `production_185849best.pth` to `production_185846best.pth` so existing released model archives remain usable.
+
+---
+
 ## Version 1.4.0 - Reviewer-Response Release
 
 **Release Date**: July 20, 2026  
