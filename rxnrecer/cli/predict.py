@@ -40,10 +40,7 @@ def load_model(model_weight_path=None, device=None):
             "production_185846best.pth",
         )
         if os.path.exists(fallback_path):
-            print(
-                f"Model checkpoint not found: {model_weight_path}. "
-                f"Falling back to {fallback_path}"
-            )
+            print("Using available model checkpoint from the configured runtime assets.")
             model_weight_path = fallback_path
 
     if device is None:
@@ -427,15 +424,10 @@ def refine_prediction_table(
     rxn_col: str = "RXNRECer",
     prob_col: str = "RXNRECer_with_prob",
 ) -> pd.DataFrame:
-    """统一清理预测结果里的酶/非酶冲突。
+    """Normalize mixed enzyme and non-enzyme predictions.
 
-    允许的合法状态只有两种：
-    1. 只有 `-`
-    2. 一个或多个真实反应，不包含 `-`
-
-    因此如果同一条预测里同时出现 `-` 和真实反应：
-    - 若 `-` 概率最高，则整条视为非酶，只保留 `-`
-    - 否则删除 `-`，保留真实反应
+    Valid outputs contain either only ``-`` or one or more concrete reaction ids.
+    If both are present, ``-`` is retained only when it has the highest score.
     """
     working = res_df.copy()
     working[[rxn_col, prob_col]] = working.apply(
@@ -527,73 +519,60 @@ def get_ensemble(input_df, rxnrecer_df):
     
 
 def integrateEnsemble(esm, t5, rxn_recer, rxn_msa, rxn_catfam, rxn_ecrecer):
-    """
-    整合不同来源的 RHEA ID 概率，优先保留较高的概率值，并对单个 RHEA ID 进行归并。
-    
-    参数:
-        esm: 包含 (RHEA_IDs, 概率) 的元组列表，这里取第一个元素
-        t5: 包含 (RHEA_IDs, 概率) 的元组列表，这里取第一个元素
-        rxn_recer: 字典，键为 RHEA_ID，值为对应的概率
-        rxn_msa: 字符串，MSA 方法产生的 RHEA ID（可能包含多个，用分号分隔）
-        rxn_catfam: 字符串，分类家族方法产生的 RHEA ID（可能包含多个，用分号分隔）
-        rxn_ecrecer: 字符串，EC 方法产生的 RHEA ID（可能包含多个，用分号分隔）
-    
-    返回:
-        dict: 以单个 RHEA ID 为键，对应最大概率为值的字典，按概率降序排序
-    """
+    """Merge reaction probabilities from direct and auxiliary predictors."""
     # -------------------------------
-    # 1. 聚合 esm 与 t5 的预测结果
+
     # -------------------------------
-    # 使用 defaultdict(list) 将同一组（可能包含多个 RHEA ID，以分号分隔）的概率收集在一起
+
     aggregated = defaultdict(list)
     for prediction in (esm[0], t5[0]):
-        # 如果 RHEA ID 为 None，则替换为 '-' 以保持一致性
+
         rhea_ids = prediction[0] if prediction[0] is not None else '-'
         aggregated[rhea_ids].append(prediction[1])
     
     # -------------------------------
-    # 2. 添加 rxn_recer 的预测结果
+
     # -------------------------------
-    # 同样确保 None 替换为 '-'
+
     for rhea_id, prob in rxn_recer.items():
         key = rhea_id if rhea_id is not None else '-'
         aggregated[key].append(prob)
     
     # -------------------------------
-    # 3. 计算每组 RHEA ID 的最高概率
+
     # -------------------------------
-    # aggregated 的键可能包含多个 RHEA ID（如 "ID1;ID2"），此处对每组取最大概率
+
     group_max_prob = {group: max(probs) for group, probs in aggregated.items()}
     
     # -------------------------------
-    # 4. 将 RHEA ID 组拆分成单个 RHEA ID，并保留较高概率
+
     # -------------------------------
     direct_prob = {}
     for group, prob in group_max_prob.items():
-        # 拆分可能由分号连接的多个 RHEA ID
+
         for rhea_id in group.split(';'):
-            # 如果同一 RHEA ID 来自多个组，保留概率较大的那个
+
             direct_prob[rhea_id] = max(direct_prob.get(rhea_id, 0), prob)
     
     # -------------------------------
-    # 5. 构建 EC 方法手动添加的 RHEA ID 字典
+
     # -------------------------------
-    # 将 rxn_msa, rxn_catfam, rxn_ecrecer 三个字符串拼接后，以分号拆分，得到唯一的 RHEA ID 集合
+
     ec_ids = set(f"{rxn_msa};{rxn_catfam};{rxn_ecrecer}".split(';'))
-    # 对每个 EC 方法产生的 RHEA ID 赋予固定概率 0.7777
+
     ec_prob = {rhea_id: 0.7777 for rhea_id in ec_ids}
     
     # -------------------------------
-    # 6. 合并来自 direct_prob 与 ec_prob 的结果
+
     # -------------------------------
-    # 对于相同的 RHEA ID，取两边概率中的较大值
+
     merged_probs = {}
     for mapping in (ec_prob, direct_prob):
         for rhea_id, prob in mapping.items():
             merged_probs[rhea_id] = max(merged_probs.get(rhea_id, 0), prob)
     
     # -------------------------------
-    # 7. 按概率降序排序并返回结果
+
     # -------------------------------
     sorted_result = dict(sorted(merged_probs.items(), key=lambda item: item[1], reverse=True))
     return sorted_result
@@ -607,7 +586,7 @@ def main():
 
     start_time = time.perf_counter()
     
-    # 1. 解析命令行参数
+
     parser = argparse.ArgumentParser(
         description='RXNRECer: A deep learning-based tool for predicting enzyme-catalyzed reactions from protein sequences.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -632,9 +611,9 @@ Examples:
     parser.add_argument('-f', '--format', type=str, choices=['tsv', 'json'], default='tsv', help='Output format: tsv or json (default: tsv)')
     parser.add_argument('-m', '--mode', type=str, choices=['s1', 's2', 's3'], default='s1', help='Prediction mode: s1 (basic), s2 (detailed), s3 (LLM reasoning) (default: s1)')
     parser.add_argument('-b', '--batch_size', type=int, default=100, help='Batch size for processing (default: 100)')
-    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.4.1')
+    parser.add_argument('-v', '--version', action='version', version='RXNRECer 1.4.2')
     
-    # 显示帮助信息
+
     if len(sys.argv) == 1:
         parser.print_help()
         return
@@ -642,7 +621,7 @@ Examples:
     args = parser.parse_args()
     args.output_file = normalize_output_file(args.output_file, args.format)
     
-    # 2. 验证输入参数
+
     if not args.input_fasta:
         print("Error: Input FASTA file is required!")
         print("Use -i or --input_fasta to specify the input file.")
@@ -653,13 +632,13 @@ Examples:
         print(f"Error: Input file '{args.input_fasta}' does not exist!")
         return
     
-    # 3. 准备输出目录
+
     output_dir = os.path.dirname(args.output_file)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    # 4. 显示运行信息
-    print("RXNRECer v1.4.1 - Enzyme Reaction Prediction")
+
+    print("RXNRECer v1.4.2 - Enzyme Reaction Prediction")
     print(f"Input file: {args.input_fasta}")
     print(f"Output file: {args.output_file}")
     print(f"Output format: {args.format}")
@@ -667,7 +646,7 @@ Examples:
     print(f"Batch size: {args.batch_size}")
     print("-" * 50)
     
-    # 5. 检查缓存
+
     cache_file_name = None
     if cfg.CACHE_ENABLED:
         cache_file_name = ftool.get_cache_filename(input_file=args.input_fasta, mode=args.mode, output_format=args.format)
@@ -679,12 +658,12 @@ Examples:
                 print(f"⏱️  Total time: {time.perf_counter() - start_time:.2f} seconds")
                 return 0
     
-    # 6. 验证S3模式配置
+
     if args.mode == 's3' and (not cfg.LLM_API_KEY or not cfg.LLM_API_URL):
         print("Error: LLM API key and URL are required for S3 mode!")
         return
     
-    # 7. 执行预测
+
     try:
         res = step_by_step_prediction(
             input_data=args.input_fasta, 
@@ -692,14 +671,14 @@ Examples:
             batch_size=args.batch_size
         )
         
-        # 8. 保存结果
+
         save_data(res, args.output_file, args.format)
         
-        # 9. 保存到缓存
+
         if cfg.CACHE_ENABLED and cache_file_name:
             ftool.save_to_cache(res, cache_file_name)
         
-        # 10. 完成
+
         elapsed_time = time.perf_counter() - start_time
         print("✅ Prediction completed successfully!")
         print(f"⏱️  Total time: {elapsed_time:.2f} seconds")

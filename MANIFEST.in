@@ -1,9 +1,9 @@
 include README.md
 include LICENSE
-include version.py
-include setup_scm_example.py
-include .bumpversion.cfg
-recursive-include docs *.md
+include docs/INSTALL.md
+include docs/LLM_API_SETUP.md
+include docs/RELEASE_NOTES.md
+include docs/WEB_API_DEPLOYMENT.md
 recursive-include examples *.md *.py
 recursive-include results *.md .gitkeep
 recursive-include extools/msa *.md

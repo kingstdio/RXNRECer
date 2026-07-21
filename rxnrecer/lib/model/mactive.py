@@ -83,7 +83,7 @@ class EsmEmbedding(nn.Module):
 
     def forward(self, x):
         batch_converter = self.esm_alphabet.get_batch_converter()
-        #破碎，把长度超过1022的截断，随机裁剪成1022长度的字符串
+
         # x = breakSquences(x)
         seq_idx = [f"seq_{i}" for i in range(len(x))]
         
@@ -178,8 +178,8 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
         dynamic_batching=dynamic_batching,
     )
            
-    # 同一个模型实例在一次推理流程里可能被重复调用很多次；
-    # 这里做一次轻量缓存，避免每个 batch 都重复 torch.load 权重。
+
+
     loaded_weight_path = getattr(model, "_loaded_weight_path", None)
     if loaded_weight_path != str(model_weight_path):
         state_dict = torch.load(
@@ -191,14 +191,14 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
         model.to(device)
         model._loaded_weight_path = str(model_weight_path)
 
-    # 加载字典
+
     with open(dict_path, 'r') as f:
         rhea_dict = json.load(f)
 
-    # 获取模型预测结果
+
     model.eval()
     all_reactions = [None] * len(normalized_sequences)
-    all_probabilities = [None] * len(normalized_sequences)  # 用于存储每个样本的标签及其对应的原始概率
+    all_probabilities = [None] * len(normalized_sequences)
     
     predictions = []
     with torch.no_grad():
@@ -220,11 +220,11 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
             sigmoid_outputs = torch.sigmoid(outputs)
             y_preds = (sigmoid_outputs > 0.5).int().cpu().tolist()
 
-            # 更新标签：确保每个样本至少有一个标签
+
             for j, pred in enumerate(y_preds):
-                if sum(pred) == 0:  # 如果没有大于0.5的标签
-                    max_index = torch.argmax(sigmoid_outputs[j]).item()  # 找到最大值的索引
-                    y_preds[j][max_index] = 1  # 将对应的标签设为1
+                if sum(pred) == 0:
+                    max_index = torch.argmax(sigmoid_outputs[j]).item()
+                    y_preds[j][max_index] = 1
                     
             reactions = [
                 ';'.join(rhea_dict[str(index)] for index, value in enumerate(pred) if value != 0)
@@ -245,7 +245,7 @@ def predict_sequences(model, sequences, model_weight_path, dict_path, batch_size
 
 
 
-#采样
+
 def select_samples(train_sequences,train_labels,model,k,batch_size):
     if train_sequences.shape[0]<k:
         return list(range(train_sequences.shape[0]))
@@ -258,13 +258,13 @@ def select_samples(train_sequences,train_labels,model,k,batch_size):
             outputs = model(batch_x_squences)
             row_sum = torch.sum(torch.abs(outputs[0] - outputs[1]), dim=1)
             sums.append(row_sum)
-    # 将列表中的张量拼接成一个张量
+
     result = torch.cat(sums, dim=0)
-    # 使用 torch.topk 函数获取最大值及其索引
+
     topk_values, topk_indices = torch.topk(result, k)
     return topk_indices
 
-#测试方法
+
 
 def caculateMetrix(groundtruth, predict, baselineName, type='binary'):
     if type == 'binary':
@@ -316,7 +316,7 @@ def caculateMetrix(groundtruth, predict, baselineName, type='binary'):
 def val_model(val_loader,model,criterion,device):
     model.eval()
     total_loss = 0.0
-    # 创建空张量用于存储模型输出和标签
+
     all_outputs = torch.tensor([])
     all_labels = torch.tensor([])
     with torch.no_grad():
@@ -326,10 +326,10 @@ def val_model(val_loader,model,criterion,device):
             batch_y_labels = batch_y_labels.to(device)
             loss = criterion(outputs, batch_y_labels)
             total_loss += loss.item()
-            # 将当前批次的模型输出和标签添加到张量中
+
             all_outputs = torch.cat((all_outputs, outputs.cpu()), dim=0)
             all_labels = torch.cat((all_labels, batch_y_labels.cpu()), dim=0)
-    # 计算准确率
+
     y_true = (all_labels==1)
     y_pred = (torch.sigmoid(all_outputs)>0.5)
     accuracy = caculateMetrix(y_true, y_pred, baselineName="baselineName", type='multi')
@@ -340,7 +340,7 @@ def val_model(val_loader,model,criterion,device):
 def train_epoch(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0.0
-    # 创建空张量用于存储模型输出和标签
+
     all_outputs = torch.tensor([])
     all_labels = torch.tensor([])
     for batch_x_squences, batch_y_labels in train_loader:
@@ -352,18 +352,18 @@ def train_epoch(model, train_loader, optimizer, criterion, device):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-        # 将当前批次的模型输出和标签添加到张量中
-        all_outputs = torch.cat((all_outputs, outputs.cpu()), dim=0)#移到cpu上减少显存占用增加
+
+        all_outputs = torch.cat((all_outputs, outputs.cpu()), dim=0)
         all_labels = torch.cat((all_labels, batch_y_labels.cpu()), dim=0)
 
     avg_loss = total_loss / len(train_loader)
-    # 计算准确率
+
     y_true = (all_labels==1)
     y_pred = (torch.sigmoid(all_outputs)>0.5)
     accuracy = caculateMetrix(y_true, y_pred, baselineName="baselineName", type='multi')
     return avg_loss,accuracy
 
-#多gpu计算，数据分发方法重写
+
 
 # This code was copied from torch.nn.parallel and adapted for DataParallel to chunk lists instead of duplicating them
 # (this is really all this code is here for)
@@ -425,22 +425,22 @@ def train(train_path, test_path,batch_size=8, esm_out_dim=1280, gru_h_dim=256, a
     train_data = pd.read_feather(train_path)
     X = train_data[train_data['isenzyme']!=False]["seq"].to_numpy()
     Y = np.vstack(train_data[train_data['isenzyme']!=False]["label"])
-    # 训练集数据处理
-    print("训练集",X.shape)
+
+    print("Training set", X.shape)
     X,Y = data_process_drop(X,Y)
     
     #Test data
     test_data = pd.read_feather(test_path)
     test_sequences = test_data[test_data['isenzyme']!=False]["seq"].to_numpy()
     test_labels = np.stack(test_data[test_data['isenzyme']!=False]["label"])
-    print("测试集",test_sequences.shape)
-    # 验证集数据处理，过长的蛋白质序列
+    print("Test set", test_sequences.shape)
+
     test_sequences,test_labels = data_process_drop(test_sequences,test_labels)
     
-    #构建测试集dataloader
+
     test_dataset = ProteinDataset(test_sequences, test_labels)
     test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False)
-    # 从训练集抽取一定比例的数据作为初始化集，其余作为样本池
+
     train_sequences, labeled_sequences, train_labels, labeled_labels = train_test_split(X, Y, test_size = 0.3, random_state=42)
 
     output_dimensions = Y.shape[1]  # Number of output classes
@@ -456,7 +456,7 @@ def train(train_path, test_path,batch_size=8, esm_out_dim=1280, gru_h_dim=256, a
         freeze_esm_layers=freeze_esm_layers,
     )
     model.to(device)
-    # 获取可用的GPU数量
+
     device_ids = list(range(args.devices))
     # device_ids = [0,1]
     model = DataParallelV2(model, device_ids=device_ids)
@@ -468,16 +468,16 @@ def train(train_path, test_path,batch_size=8, esm_out_dim=1280, gru_h_dim=256, a
     poolSize = 200000
     best_accuracy=0.0
     for cycle in range(Cycles):
-        #构建训练集loader
+
         train_dataset = ProteinDataset(labeled_sequences, labeled_labels)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,drop_last=True)
         labeled_number = len(train_dataset)
-        print("loader_finish训练集大小==============",labeled_number)
+        print("Loader finished, training set size =", labeled_number)
         cycle_loss=0.0
         cycle_acc=0.0
         for epoch in range(epoches):
             cycle_loss ,cycle_acc = train_epoch(model=model, train_loader=train_loader, optimizer=optimizer, criterion=criterion, device= device)
-            # 写入日志文件
+
             with open(logname, "a") as file:
                 file.write(f"Epoches [{epoch + 1}/{epoches}] - Train Loss: {cycle_loss:.6f} - Train Acc: {cycle_acc}\n")
 
@@ -485,22 +485,22 @@ def train(train_path, test_path,batch_size=8, esm_out_dim=1280, gru_h_dim=256, a
         test_loss,test_accuracy = val_model(test_loader, model,criterion,device)
         print(f"Epoch [{cycle+1}/{Cycles}] - Train Avg Loss: {cycle_loss:.6f} - Train Avg Acc: {cycle_acc}- Test Avg Loss: {test_loss:.6f} - Test Avg Acc: {test_accuracy}")
 
-        # 写入日志文件
+
         with open(logname, "a") as file:
             file.write(f"Cycles [{cycle + 1}/{Cycles}] - Sample_Number: {labeled_number} - Train Loss: {cycle_loss:.6f} - Train Acc: {cycle_acc} - Test Loss: {test_loss:.6f} -Test Acc:{test_accuracy}\n")
-        #保存最佳模型
+
         best_mode_pth = args.taskname + 'best_mode.pth'
         if best_accuracy<test_accuracy[0]:
             torch.save(model.state_dict(),best_mode_pth)
             best_accuracy = test_accuracy[0]
-        #为了加快采样，将从样本池中随机抽出一半组成未标记样本池,（仅在全部训练数据时使用，单独酶蛋白仅22万数据直接对全部数据采样）
+
         indices = np.random.permutation(train_sequences.shape[0])
         train_sequences = train_sequences[indices]
         train_labels = train_labels[indices]
-        # 选择前 poolSize 个样本
+
         X_pool = train_sequences
         Y_pool = train_labels
-        #采样,全量
+
         index = select_samples(X_pool, Y_pool, model,k=20000,batch_size=batch_size)
         
         selected_sequences = np.array([X_pool[i] for i in index])
@@ -510,10 +510,10 @@ def train(train_path, test_path,batch_size=8, esm_out_dim=1280, gru_h_dim=256, a
         labeled_sequences = np.concatenate((labeled_sequences, selected_sequences))
         labeled_labels = np.concatenate((labeled_labels, selected_labels))
 
-#丢弃超过1022的样本
+
 def data_process_drop(X,Y):
-    X_processed = []  # 用于存储处理后的数据
-    Y_processed = []  # 用于存储处理后的标签
+    X_processed = []
+    Y_processed = []
     for i, x in enumerate(X):
         if len(x) < 1022: 
             X_processed.append(x)
@@ -526,8 +526,8 @@ def step_by_step_run():
     # loading data path
     train_path = "task240524/ds_train.feather"
     test_path = "task240524/ds_test.feather"
-    # train中长度超过1022的字符串个数
-    # test中长度超过1022的字符串个数
+
+
     train(train_path=train_path,test_path=test_path,batch_size=args.batchsize, esm_out_dim=1280, gru_h_dim=512, att_dim=32, dropout_rate=0.2, freeze_esm_layers=32,epoches=10)
 
 

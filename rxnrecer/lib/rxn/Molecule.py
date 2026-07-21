@@ -15,17 +15,17 @@ class Molecule:
     def __init__(self, cpd_smiles, cpd_name='', cpd_ref_chebi='', cpd_link='#', cpd_id='', cpd_num=1):
         
         self.cpd_id = cpd_id
-        self.cpd_smiles = cpd_smiles  # SMILES 字符串
-        self.cpd_name = cpd_name      # 化合物名称
-        self.cpd_link = cpd_link        # 外部链接
+        self.cpd_smiles = cpd_smiles
+        self.cpd_name = cpd_name
+        self.cpd_link = cpd_link
         self.cpd_ref_chebi = cpd_ref_chebi
         self.mol = Chem.MolFromSmiles(self.cpd_smiles) if cpd_smiles.strip() else None
         self.mol_num = cpd_num
         self.box_up_padding = 20
         
-        # 检查分子对象是否创建成功
+
         if self.mol is None:
-            raise ValueError(f"无法解析SMILES字符串: {cpd_smiles}")
+            raise ValueError(f"Could not parse SMILES string: {cpd_smiles}")
         
         self.mol_svg = self.draw_mol_simple()
     
@@ -77,39 +77,39 @@ class Molecule:
             f.write(self.mol_svg)
     
     
-    #region 获取 RDKit 的 SVG 绘图器
+
     def get_drawer(self, mol_pic_width, mol_pic_height, tag_box_height):
-        """获取 RDKit 的 SVG 绘图器"""
+        """Return an RDKit SVG drawer."""
         drawer = rdMolDraw2D.MolDraw2DSVG(width=mol_pic_width, 
-                                    height=mol_pic_height + tag_box_height + 20 ,    # 加上底部方框的高度
+                                    height=mol_pic_height + tag_box_height + 20 ,
                                     panelWidth=-1,
-                                    panelHeight=mol_pic_height + tag_box_height # 加上底部方框的高度
+                                    panelHeight=mol_pic_height + tag_box_height
                                     )
         
         
         do = drawer.drawOptions()
         do.addStereoAnnotation = False
         do.explicitMethyl = True
-        do.addStereoAnnotation = True  # 显示立体化学注释
+        do.addStereoAnnotation = True
 
-        # 控制字体大小
-        do.annotationFontScale = 0.8  # 调整注释字体大小
-        do.baseFontSize = 0.6         # 调整原子标签字体大小
-        do.legendFontSize = 24       # 调整化合物名称的字体大小
 
-        # 设置原子颜色
+        do.annotationFontScale = 0.8
+        do.baseFontSize = 0.6
+        do.legendFontSize = 24
+
+
         do.setAtomPalette({
-            6: (204/255, 153/255, 51/255, 1),  # 碳原子颜色
-            8: (0/255, 153/255, 102/255, 1), # 氧原子颜色
-            7: (51/255, 102/255, 153/255, 1),     # 氮原子颜色
-            15: (255/255, 153/255, 51/255, 1) # 磷原子颜色 (例子颜色)
+            6: (204/255, 153/255, 51/255, 1),
+            8: (0/255, 153/255, 102/255, 1),
+            7: (51/255, 102/255, 153/255, 1),
+            15: (255/255, 153/255, 51/255, 1)
         })
         
         return drawer
     #endregion
     
     def add_mol_name_labele(self, mol_svg, mol_pic_width, mol_pic_height, mol_pic_size, tag_box_height):
-        """在 SVG 图片上添加化合物名称及超链接"""
+        """Add the compound name and external link to the SVG."""
         box_width = int(mol_pic_width*0.8)
         box_height = 40
 
@@ -127,19 +127,19 @@ class Molecule:
             label_font_size = 12
 
         self.cpd_link = self.get_cpd_link()
-        # 调整底部方框的位置和大小
+
         additional_svg = f'''
         <a href="{self.cpd_link}" target="_blank" style="cursor:pointer;">
         <g>
-            <!-- 底部方框 -->
+            <!-- label box -->
             <rect x="{x_box}" y="{y_box}" width="{box_width}" height="{box_height}" rx="10" ry="10" style="fill:#0066CC;" />
-            <!-- 化合物名称及超链接 -->
+            <!-- compound name and external link -->
             <text x="{x_text }" y="{y_text}" font-size="{label_font_size}"  font-weight="bold" text-anchor="middle" fill="#FFFFFF">{self.cpd_name}</text>
         </g>
         </a>
         '''
 
-        # 将方框及文字加到生成的 SVG 中，放在关闭标签 `</svg>` 之前
+
         mol_svg = mol_svg.replace('</svg>', additional_svg + '</svg>')
         
         return mol_svg
@@ -161,18 +161,18 @@ class Molecule:
             
         mol_pic_width = int(mol_pic_width + mol_pic_size *scale_param )
         
-        # 初始化 RDKit 的 SVG 绘图器
+
         drawer = self.get_drawer(mol_pic_width=mol_pic_width, 
                                  mol_pic_height=mol_pic_height, 
                                  tag_box_height=tag_box_height
                                  
                                  )
         
-        # 显示化合物名称到反应结构图上
+
         Chem.Draw.PrepareAndDrawMolecule(drawer, mol, kekulize=False)
         
 
-        # 完成绘制并获取 SVG 文本
+
         drawer.FinishDrawing()
         svg = drawer.GetDrawingText()
     
@@ -184,9 +184,9 @@ class Molecule:
                                         mol_pic_size=mol_pic_size, 
                                         tag_box_height= tag_box_height)
             
-            #TODO 将svg写入文件，返回链接    
+
             
-        # 将 SVG 写入到文件
+
         if not os.path.exists(f'{cfg.DIR_CPD_SVG}'):
             os.makedirs(f'{cfg.DIR_CPD_SVG}')
         
@@ -200,10 +200,10 @@ class Molecule:
                 file.write(svg)
         
                 
-        return os.path.relpath(file_name, cfg.DIR_PROJECT_ROOT) #返回相对路径
+        return os.path.relpath(file_name, cfg.DIR_PROJECT_ROOT)
     
     def to_html(self):
-        """生成 HTML 来展示反应物和生成物的图像及其链接"""
+        """Render this molecule as an HTML image block."""
         html_output = "<div style='display: flex; align-items: center;'>"
         html_output += f"<img src='{cfg.DIR_PROJECT_ROOT}/{self.mol_svg}' style='display:inline-block'/>"
         html_output += "</div>"
@@ -223,7 +223,7 @@ class Molecule:
     
 
     def to_json(self):
-        """将 Molecule 对象序列化为 JSON"""
+        """Serialize this molecule to JSON."""
         return json.dumps(self.to_dict(), indent=4)
     
     

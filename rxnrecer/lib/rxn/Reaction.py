@@ -22,53 +22,53 @@ class Reaction:
     
     
     def get_cpd_coef(self, cpd_string):
-        """获取某个化合物的系数"""
+        """Return the stoichiometric coefficient for a compound string."""
         
-        # 去除输入字符串的多余空格
+
         cpd_string = cpd_string.strip()
 
-        # 拆分化合物字符串为列表
+
         cpd_string_list = cpd_string.split(' ')
 
-        # 如果列表为空，返回 1 并输出错误信息
+
         if not cpd_string_list:
             print(f'Error: cpd_string: {cpd_string}')
             return 1
 
-        # 获取可能的系数部分
+
         coef_str = cpd_string_list[0].strip()
 
-        # 判断第一个字符串是否为数字
+
         if coef_str.isdigit():
             return int(coef_str)
         
-        # 处理特殊情况，比如 'a' 或 'an'
+
         if coef_str.lower() in ['a', 'an']:
             return 1
 
-        # 默认返回 1，保持扩展性
+
         return 1
 
 
     
     def parse_reaction(self):
-        """解析反应物和生成物，添加错误处理"""
+        """Parse reactants and products with defensive error handling."""
         try:
-            # 检查必要的输入数据
+
             if not self.reaction_smiles or self.reaction_smiles.strip() == '':
-                raise ValueError("SMILES字符串为空")
+                raise ValueError("SMILES string is empty")
             
             if '>>' not in self.reaction_smiles:
-                raise ValueError("SMILES字符串格式不正确，缺少'>>'分隔符")
+                raise ValueError("Invalid SMILES string: missing '>>' separator")
             
-            # 解析SMILES
+
             reactants_smiles, products_smiles = self.reaction_smiles.split('>>')
             reactants_smiles_list = reactants_smiles.split('.')
             products_smiles_list = products_smiles.split('.')
             
-            # 解析反应方程式
+
             if not self.reaction_equation or ' = ' not in self.reaction_equation:
-                # 如果没有反应方程式，创建默认名称
+
                 reactants_names_list = [f'reactant_{i+1}' for i in range(len(reactants_smiles_list))]
                 products_names_list = [f'product_{i+1}' for i in range(len(products_smiles_list))]
             else:
@@ -76,13 +76,13 @@ class Reaction:
                 reactants_names_list = reactants_names.split(' + ')
                 products_names_list = products_names.split(' + ')
             
-            # 获取系数
+
             reactants_coef_list = [self.get_cpd_coef(item) for item in reactants_names_list]
             products_coef_list = [self.get_cpd_coef(item) for item in products_names_list]
             
-            # 解析ChEBI参考
+
             if not self.reaction_equation_ref_chebi or ' = ' not in self.reaction_equation_ref_chebi:
-                # 如果没有ChEBI参考，创建默认值
+
                 reactants_ref_chebi_list = ['' for _ in range(len(reactants_smiles_list))]
                 products_ref_chebi_list = ['' for _ in range(len(products_smiles_list))]
             else:
@@ -90,14 +90,14 @@ class Reaction:
                 reactants_ref_chebi_list = reactants_ref_chebi.split(' + ')
                 products_ref_chebi_list = products_ref_chebi.split(' + ')
             
-            # 创建分子对象，添加错误处理
+
             self.reactants = []
             for smiles, name, ref_chebi, ref_coef in zip(reactants_smiles_list, reactants_names_list, reactants_ref_chebi_list, reactants_coef_list):
                 try:
                     mol = Molecule(cpd_smiles=smiles.strip(), cpd_name=name.strip(), cpd_ref_chebi=ref_chebi.strip(), cpd_num=ref_coef)
                     self.reactants.append(mol)
                 except Exception as e:
-                    print(f"警告: 无法创建反应物分子 {name} (SMILES: {smiles}): {e}")
+                    print(f"Warning: could not create reactant molecule {name} (SMILES: {smiles}): {e}")
             
             self.products = []
             for smiles, name, ref_chebi, ref_coef in zip(products_smiles_list, products_names_list, products_ref_chebi_list, products_coef_list):
@@ -105,17 +105,17 @@ class Reaction:
                     mol = Molecule(cpd_smiles=smiles.strip(), cpd_name=name.strip(), cpd_ref_chebi=ref_chebi.strip(), cpd_num=ref_coef)
                     self.products.append(mol)
                 except Exception as e:
-                    print(f"警告: 无法创建产物分子 {name} (SMILES: {smiles}): {e}")
+                    print(f"Warning: could not create product molecule {name} (SMILES: {smiles}): {e}")
                     
         except Exception as e:
-            # 如果解析失败，创建空的反应物和产物列表
-            print(f"解析反应失败 {self.reaction_id}: {e}")
+
+            print(f"Failed to parse reaction {self.reaction_id}: {e}")
             self.reactants = []
             self.products = []
     
 
     def get_balanced_equation(self, res_type='ref_chebi'):    
-        """获取配平后的反应方程式"""
+        """Return the balanced reaction equation."""
         
         res = ''
         if res_type =='ref_chebi':
@@ -134,33 +134,33 @@ class Reaction:
         
     
     def to_html(self):
-        """生成 HTML 来展示反应物和生成物的图像及其链接"""
+        """Render reactants and products as an HTML image block."""
         html_output = "<div style='display: flex; align-items: center; font-size:40px;'>"
 
-        # 添加反应物图片
+
         for reactant in self.reactants:
-            lb_coef = reactant.mol_num if reactant.mol_num > 1 else '' # 显示分子系数
+            lb_coef = reactant.mol_num if reactant.mol_num > 1 else ''
             
             html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='{cfg.DIR_PROJECT_ROOT}/{reactant.mol_svg}' style='display:inline-block; margin-right: 10px;'/>"
             html_output += " + "
 
-        html_output = html_output[:-3]  # 移除最后的加号
+        html_output = html_output[:-3]
         html_output += " = "
 
-        # 添加生成物图片
+
         for product in self.products:
             
             lb_coef = product.mol_num if product.mol_num > 1 else ''
             html_output += f"<h2 style='font-sze:100px;'>{lb_coef}</h2><img src='{cfg.DIR_PROJECT_ROOT}/{product.mol_svg}' style='display:inline-block; margin-right: 10px;'/>"
             html_output += " + "
 
-        html_output = html_output[:-3]  # 移除最后的加号
+        html_output = html_output[:-3]
         html_output += "</div>"
 
         return html_output
     
     def to_dict(self):
-        """将 Reaction 对象转化为字典形式"""
+        """Convert this reaction to a dictionary."""
         return {
             'reaction_id': self.reaction_id,
             'reaction_smiles': self.reaction_smiles,
@@ -172,13 +172,13 @@ class Reaction:
     }
     
     def to_json(self):
-        """将 Reaction 对象序列化为 JSON"""
+        """Serialize this reaction to JSON."""
         str_json = json.dumps(self.to_dict(), indent=4)
         return str_json
     
     
     def save_json_file(self, file_path, overwrite: bool = True):
-        """将 Reaction 对象序列化为 JSON 文件"""
+        """Serialize this reaction to a JSON file."""
         fileTool.write_json_file(self, file_path, overwrite=overwrite)
         
     

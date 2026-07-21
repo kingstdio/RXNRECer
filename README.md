@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/badge/PyPI-rxnrecer-blue.svg)](https://pypi.org/project/rxnrecer/)
 
-**RXNRECer v1.4.1** is a deep learning framework for predicting enzyme-catalyzed reactions directly from protein sequences.
+**RXNRECer v1.4.2** is a deep learning framework for predicting enzyme-catalyzed reactions directly from protein sequences.
 It is the official implementation of  
 **“RXNRECer: Active Learning with Protein Language Models for Fine-Grained Enzyme Reaction Prediction.”**
 
@@ -266,11 +266,9 @@ RXNRECer/                               # Project root (release)
 │   ├── predictions/                    # Prediction outputs
 │   └── sample/                         # Sample results
 │
-├── docs/                               # Documentation
-├── scripts/                            # Build and utility scripts
+├── docs/                               # User documentation
 ├── MANIFEST.in                         # Package data manifest
 ├── pyproject.toml                      # Build and dependencies for PyPI
-├── environment_rxnrecer-release.yml    # Conda environment
 ├── LICENSE                             # MIT License
 ├── README.md                           # This file
 └── .gitignore                          # Git ignore rules

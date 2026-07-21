@@ -45,7 +45,7 @@ SAMPLE_DIR = DATA_ROOT + 'sample/'
 CKPT_PROSTT5 = DIR_PROJECT_ROOT + '/ckpt/prostt5'
 
 # Production model files
-FILE_MOLEL_PRODUCTION_BEST_MODEL = DIR_PROJECT_ROOT + '/ckpt/rxnrecer/production_185849best.pth'
+FILE_MOLEL_PRODUCTION_BEST_MODEL = DIR_PROJECT_ROOT + '/ckpt/rxnrecer/production_185846best.pth'
 
 # Separator
 SPLITER = ';'

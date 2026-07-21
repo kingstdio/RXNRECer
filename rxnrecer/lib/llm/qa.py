@@ -31,13 +31,13 @@ def make_query_string(query_row, sys_prompt_dict):
     system_prompt = sys_prompt_dict[query_row['prompt_sys']]['prompt_text']
     rxn_details = query_row['RXN_details']
     
-    # 处理Reaction对象，提取反应ID
+
     if rxn_details and len(rxn_details) > 0:
-        # 如果是Reaction对象列表，提取reaction_id
+
         if hasattr(rxn_details[0], 'reaction_id'):
             reaction_ids = [rxn.reaction_id for rxn in rxn_details if rxn is not None]
         else:
-            # 兼容旧格式，直接使用
+
             reaction_ids = rxn_details
     else:
         reaction_ids = []
@@ -96,7 +96,7 @@ def single_chat(dict_query, llm_model=None, api_key=None, api_url=None, debug=Fa
         print(f"[ERROR] LLM query/parse failed: {e}")
         if debug and 'content_str' in locals():
             print("[RAW CONTENT]:", content_str)
-        # 返回包含results字段的默认结构，确保调用方可以安全访问['results']
+
         return {"results": [], "error": str(e)}
 
 

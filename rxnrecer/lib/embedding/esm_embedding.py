@@ -6,9 +6,9 @@ import torch
 import esm
 
 
-# region 将字符串拆分成固定长度
+
 def cut_text(text,lenth):
-    """[将字符串拆分成固定长度]
+    """Split a string into fixed-length chunks.
 
     Args:
         text ([string]): [input string]
@@ -22,9 +22,9 @@ def cut_text(text,lenth):
     return textArr 
 #endregion
 
-#region 对单个序列进行embedding
+
 def get_rep_single_seq_inter(seqid, sequence, model, batch_converter,rep_layers=[33], seqthres=1022, device=0):
-    """[对单个序列进行embedding]
+    """Generate an ESM embedding for one sequence.
 
     Args:
         seqid ([string]): [sequence name]]
@@ -74,9 +74,9 @@ def get_rep_single_seq_inter(seqid, sequence, model, batch_converter,rep_layers=
 #endregion
 
 
-#region 对多个序列进行embedding
+
 def getEsm(sequences, seqthres=1022, device=0):
-    """[对多个序列进行embedding]
+    """Generate ESM embeddings for multiple sequences.
     Args:
         sequences ([DataFrame]): [ sequence info]]
         seqthres (int, optional): [description]. Defaults to 1022.

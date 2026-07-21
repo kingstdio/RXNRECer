@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Any
 
 # Version information
-__version__ = "1.4.1"
-__version_info__ = (1, 4, 1)
+__version__ = "1.4.2"
+__version_info__ = (1, 4, 2)
 
 def get_version():
     """Get the version string."""
@@ -29,7 +29,7 @@ def get_version_info():
 
 def get_full_version():
     """Get the full version string with build info."""
-    return f"{__version__} (2026-07-20)"
+    return f"{__version__} (2026-07-21)"
 
 __author__ = "Zhenkun Shi"
 __email__ = "zhenkun.shi@tib.cas.cn"
@@ -95,12 +95,12 @@ def check_data_files():
         print("\n📥 To download data files, run:")
         print("   rxnrecer-download-data")
         print("\n📚 Or manually download from:")
-        print("   - Data (国内镜像): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/data.tar.gz")
-        print("   - Data (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz")
-        print("   - Models (国内镜像): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz")
-        print("   - Models (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz")
-        print("   - Extools (国内镜像): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz")
-        print("   - Extools (AWS镜像): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz")
+        print("   - Data (primary mirror): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/data.tar.gz")
+        print("   - Data (AWS mirror): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz")
+        print("   - Models (primary mirror): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz")
+        print("   - Models (AWS mirror): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz")
+        print("   - Extools (primary mirror): http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz")
+        print("   - Extools (AWS mirror): https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz")
         return False
     
     print("✅ All required data files are available")
@@ -185,16 +185,16 @@ def download_data_files(force=False, data_only=False, models_only=False, extools
         
         # Download data files - multiple mirrors for better availability
         data_urls = [
-            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/data.tar.gz",  # 国内镜像
-            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz"  # AWS镜像
+            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/data.tar.gz",
+            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/data.tar.gz",
         ]
         ckpt_urls = [
-            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz",  # 国内镜像
-            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz"  # AWS镜像
+            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/ckpt.tar.gz",
+            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/ckpt.tar.gz",
         ]
         extools_urls = [
-            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz",  # 国内镜像
-            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz"  # AWS镜像
+            "http://s3.biodesign.ac.cn/bucket-rxnrecer-web/files/extools.tar.gz",
+            "https://tibd-public-datasets.s3.us-east-1.amazonaws.com/rxnrecer/extools.tar.gz",
         ]
         
         if (not data_only and not models_only and not extools_only) or data_only:

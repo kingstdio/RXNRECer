@@ -1,25 +1,38 @@
 # RXNRECer Release Notes
 
-## Version 1.4.1 - Pip Smoke-Test Compatibility Fixes
+## Version 1.4.2 - Public Package Cleanup
+
+**Release Date**: July 21, 2026  
+**Status**: Production Ready
+
+### Updates
+
+- Cleaned the source distribution to include only user-facing documentation.
+- Removed non-user-facing workflow notes and development templates from the public release tree.
+- Simplified release notes to focus on installation and runtime changes relevant to end users.
+
+---
+
+## Version 1.4.1 - Installation Compatibility
 
 **Release Date**: July 20, 2026  
 **Status**: Production Ready
 
 ### Fixes
 
-- Constrained package metadata to `numpy>=1.21.0,<2.0` to match the documented validated environment.
-- Added checkpoint filename fallback from `production_185849best.pth` to `production_185846best.pth` so existing released model archives remain usable.
+- Constrained package metadata to `numpy>=1.21.0,<2.0` to match the validated environment.
+- Improved model checkpoint compatibility for released runtime assets.
 
 ---
 
-## Version 1.4.0 - Reviewer-Response Release
+## Version 1.4.0 - Documentation and Packaging Refresh
 
 **Release Date**: July 20, 2026  
 **Status**: Production Ready
 
 ### Major Updates
 
-- Added clearer installation and reproducibility guidance for reviewer verification.
+- Added clearer installation and reproducibility guidance.
 - Documented the validated environment profile, including Python, NumPy, PyTorch, CUDA, pandas, scikit-learn, and Apptainer versions.
 - Clarified S2/S3 container-runtime requirements for CatFam and ECRECer `.sif` images.
 - Added public webserver documentation and local usage guidance.
@@ -126,8 +139,7 @@ RXNRECer/                    # Project root
 ├── data/                    # Data files (download required)
 ├── ckpt/                   # Model checkpoints (download required)
 ├── results/                 # Output results
-├── docs/                    # Documentation
-└── scripts/                 # Build scripts
+└── docs/                    # User documentation
 ```
 
 ### 🔧 Technical Requirements

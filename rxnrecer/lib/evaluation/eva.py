@@ -42,7 +42,7 @@ except ImportError:  # pragma: no cover - optional notebook dependency
 
 
 def _effective_cpu_count() -> int:
-    """返回当前进程真正可用的 CPU 数。"""
+    """Return the number of CPUs available to this process."""
     slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
     if slurm_cpus:
         try:

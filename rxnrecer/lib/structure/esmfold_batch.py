@@ -50,7 +50,7 @@ def move_pdb_files(src: str, target: str) -> None:
         Path(target).parent.mkdir(parents=True, exist_ok=True)
         shutil.move(src, target)
     else:
-        logging.warning(f"文件不存在，跳过：{src}")
+        logging.warning(f"File does not exist, skipping: {src}")
 
 
 def chunk_fasta(
@@ -127,7 +127,7 @@ def chunk_fasta(
                          (f", extra = {extra_arg}" if extra_arg else ""))
 
             if not oversized.empty:
-                logging.warning("以下序列长度超过5000，未写入chunk文件，请手动处理：")
+                logging.warning("The following sequences exceed length 5000 and were not written to chunk files:")
                 for _, row in oversized.iterrows():
                     logging.warning(f"  ID: {row['id']}, Length: {row['seqlen']}")
 
@@ -204,8 +204,8 @@ echo "singularity exec --nv --bind /hpcfs:/hpcfs {container_path} \\
 singularity exec --nv --bind /hpcfs:/hpcfs {container_path} \\
     bash {esmfold_script} -i $INPUT_DIR/$INPUT_FILE -o $OUTPUT_DIR $EXTRA_ARGS
 """)
-        logging.info(f"[{partition}] SLURM 脚本生成成功: {script_path}")
-        logging.info(f"提交命令：sbatch {script_path}")
+        logging.info(f"[{partition}] SLURM script generated: {script_path}")
+        logging.info(f"Submit command: sbatch {script_path}")
 
 
 def load_existing_pdb_files(pdb_dir: str) -> list:
@@ -246,7 +246,7 @@ def prepare_fasta_for_esmfold(
 
     too_long = records_df[records_df["seqlen"] > max_seq_len]
     if not too_long.empty:
-        logging.warning("以下序列长度超过2600，未处理，请手动处理：")
+        logging.warning("The following sequences exceed length 2600 and were not processed:")
         for _, row in too_long.iterrows():
             logging.warning(f"  ID: {row['id']}, Length: {row['seqlen']}")
     records_df = records_df[records_df["seqlen"] <= max_seq_len].reset_index(drop=True)
@@ -281,7 +281,7 @@ def step_by_step_run(
         Dictionary with chunk information
     """
     for path in [tempdir, slurm_dir, log_dir, pdb_output_dir, target_pdb_dir]:
-        logging.info(f"创建文件夹: {path}")
+        logging.info(f"Created directory: {path}")
         Path(path).mkdir(parents=True, exist_ok=True)
 
     records_df, too_long = prepare_fasta_for_esmfold(fasta_path, target_pdb_dir)

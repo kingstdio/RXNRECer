@@ -18,12 +18,12 @@ import numpy as np
 import pandas as pd
 import concurrent.futures
 from sklearn.metrics.pairwise import cosine_similarity # cos
-from sklearn.metrics.pairwise import euclidean_distances # 欧氏距离
+from sklearn.metrics.pairwise import euclidean_distances
 from pandarallel import pandarallel 
 
-# 余弦相似性计算
+
 def get_cosine_similarity(fx,fy):
-    """余弦相似性
+    """Cosine similarity.
 
     Args:
         fx (_type_): _description_
@@ -35,9 +35,9 @@ def get_cosine_similarity(fx,fy):
     res = cosine_similarity(fx, fy)
     return res
 
-# 欧式距离相似性计算
+
 def get_euclidean_distances(fx, fy):
-    """欧氏距离
+    """Euclidean distance.
 
     Args:
         fx (_type_): _description_
@@ -49,7 +49,7 @@ def get_euclidean_distances(fx, fy):
     res = euclidean_distances(fx, fy,Y_norm_squared=None, squared=False)
     return res
 
-# # 皮尔逊相似性计算
+
 # def get_pearsonr_smilarity(fx, fy):
 #     res = pearsonr(fx, fy)
 #     return res

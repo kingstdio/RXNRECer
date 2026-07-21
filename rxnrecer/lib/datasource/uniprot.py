@@ -1,9 +1,4 @@
-"""
-UniProt 数据源客户端。
-
-本模块提供访问 UniProt REST API 的轻量封装，并将响应解析为 Pandas DataFrame。
-仅负责“取数与解析”，不涉及本地落盘路径等工程细节。
-"""
+"""Lightweight UniProt REST API client helpers."""
 
 from __future__ import annotations
 
@@ -16,7 +11,7 @@ from typing import Generator, Optional, Tuple
 import re
 from tqdm import tqdm
 
-# 默认请求参数
+
 DEFAULT_TIMEOUT: int = 30
 DEFAULT_RETRIES: int = 5
 BACKOFF_FACTOR: float = 0.25
@@ -26,9 +21,9 @@ DEFAULT_FIELDS = (
 )
 
 
-#region: HTTP 会话
+
 def get_http_session() -> requests.Session:
-    """构建带重试策略的 requests.Session。"""
+    """Build a requests session with retry handling."""
     session = requests.Session()
     retries = Retry(
         total=DEFAULT_RETRIES,
@@ -52,14 +47,14 @@ def get_next_link(headers) -> Optional[str]:
 
 
 def parse_tsv_response(tsv_text: str) -> pd.DataFrame:
-    """将 UniProt TSV 响应解析为 DataFrame。"""
+    """Parse a UniProt TSV response into a DataFrame."""
     if not tsv_text.strip():
         return pd.DataFrame()
     return pd.read_csv(StringIO(tsv_text), sep="\t")
 
 
 class UniProtClient:
-    """带分页和重试的 UniProt REST 客户端。"""
+    """UniProt REST client with pagination and retries."""
 
     def __init__(self, session: Optional[requests.Session] = None, timeout: int = DEFAULT_TIMEOUT):
         self.session = session or get_http_session()
@@ -75,11 +70,7 @@ class UniProtClient:
         batch_size: int = 500,
     ) -> pd.DataFrame:
         """
-        获取 UniProt 记录。
-
-        - `ids` 模式下会按批次组装 accession 查询
-        - `query` 模式下直接执行查询
-        - 自动处理分页，并去重
+        Fetch UniProt records with batched IDs or a direct query.
         """
         if not query and not ids:
             raise ValueError("Either query or ids must be provided")
@@ -177,7 +168,7 @@ def get_uniprot_records_by_ids(ids: List[str], batch_size: int = 40) -> pd.DataF
 
 def fetch_uniprot_rhea_relation(size: int = 500, timeout: int = DEFAULT_TIMEOUT) -> pd.DataFrame:
     """
-    拉取 UniProt → Rhea 关系表（TSV），返回 DataFrame：['uniprot_id','ec','reaction_id']。
+    Fetch the UniProt-to-Rhea mapping TSV as a DataFrame.
     """
     api_url = (
         "https://rest.uniprot.org/uniprotkb/search?"
@@ -201,4 +192,3 @@ def fetch_uniprot_rhea_relation(size: int = 500, timeout: int = DEFAULT_TIMEOUT)
 def read_snapshot_tsv(path: str) -> pd.DataFrame:
     """Read a UniProt snapshot TSV produced by upstream extraction scripts."""
     return pd.read_csv(path, sep="\t", header=0)
-

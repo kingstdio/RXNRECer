@@ -38,7 +38,7 @@ def read_file_from_gzip(file_in_path: str, file_out_path: str, extract_type: str
     if save_file_type not in {"tsv", "feather"}:
         raise ValueError("save_file_type must be 'tsv' or 'feather'")
 
-    # feather 模式先导出到中间 TSV，再转换
+
     if save_file_type == 'feather':
         outpath = file_out_path
         file_out_path = os.path.join(cfg.TEMP_DIR, 'temprecords.tsv')
@@ -70,19 +70,15 @@ def read_file_from_gzip(file_in_path: str, file_out_path: str, extract_type: str
         raise RuntimeError(f"Failed to read gzip and export data: {e}")
  # endregion
 
-#region EC 解析：从描述中拆分 EC 号
-def extract_ec_list(description: str) -> List[str]:
-    """
-    从描述文本中提取所有 EC 号，返回扁平化列表。
 
-    规则：匹配所有 "EC=xxx" 片段，并将片段内可能存在的逗号分隔多个 EC 进一步展开。
-    """
+def extract_ec_list(description: str) -> List[str]:
+    """Extract EC numbers from a UniProt description string."""
     if not description:
         return []
     ec_matches = re.findall(r"EC=([0-9\-,.;]+)", description)
     if not ec_matches:
         return []
-    # 将每个匹配片段按逗号展开
+
     ec_list: List[str] = []
     for part in ec_matches:
         for item in part.split(','):
@@ -92,11 +88,9 @@ def extract_ec_list(description: str) -> List[str]:
     return ec_list
 # endregion
 
-#region EC 汇总：拼接字符串、判断多功能、统计数量
+
 def summarize_ec_list(ec_list: List[str]) -> Tuple[str, bool, int]:
-    """
-    根据 EC 列表返回：标准化字符串、多功能标记、数量。
-    """
+    """Return a normalized EC string, multifunction flag, and EC count."""
     if not ec_list:
         return '-', False, 0
     ec_str = ','.join(ec_list)
@@ -105,12 +99,9 @@ def summarize_ec_list(ec_list: List[str]) -> Tuple[str, bool, int]:
     return ec_str, is_multi, count
 # endregion
 
-#region EC 特异性层级：计算最具体层级（4 为最具体）
+
 def compute_ec_specific_level(ec_list: List[str]) -> int:
-    """
-    依据 EC 列表计算特异性层级：对每个 EC 号按连字符数量估算层级，取最具体值。
-    单一 EC 例如 "1.2.3.4" → 4；含 "-" 越多越不具体。
-    """
+    """Estimate the most specific EC hierarchy level in a list of EC numbers."""
     if not ec_list:
         return 0
     best = 0
@@ -121,36 +112,27 @@ def compute_ec_specific_level(ec_list: List[str]) -> int:
     return best
 # endregion
 
-#region 提取单条含有EC号的数据
+
 def process_record(record, extract_type: str = 'with_ec') -> List:
-    """
-    提取单条 UniProt 记录的关键信息，并根据提取类型筛选。
-
-    Args:
-        record: Bio.SeqRecord 对象，表示一条 UniProt 记录。
-        extract_type: 提取类型，可选 'with_ec'（仅含EC号）、'without_ec'（不含EC号）、'full'（全部）。
-
-    Returns:
-        List: 提取的字段列表，或根据筛选规则返回空列表。
-    """
+    """Extract selected fields from one UniProt SeqRecord."""
     try:
-        # 1. 解析描述信息，判断是否为酶（含EC号）
+
         description = record.description or ''
         is_enzyme = 'EC=' in description
 
-        # 2. 初始化相关变量
-        is_multi_functional = False  # 是否多功能酶
-        function_counts = 0          # EC号数量
-        ec_specific_level = 0        # EC号特异性层级
-        ec = '-'                     # EC号字符串
 
-        # 3. 提取 EC 及相关属性（拆分 → 汇总 → 计算层级）
+        is_multi_functional = False
+        function_counts = 0
+        ec_specific_level = 0
+        ec = '-'
+
+
         if is_enzyme:
             ec_list = extract_ec_list(description)
             ec, is_multi_functional, function_counts = summarize_ec_list(ec_list)
             ec_specific_level = compute_ec_specific_level(ec_list)
 
-        # 4. 提取其他字段
+
         id_ = str(record.id).strip()
         name = str(record.name).strip()
         seq = str(record.seq).strip()
@@ -159,14 +141,14 @@ def process_record(record, extract_type: str = 'with_ec') -> List:
         date_annotation_update = str(record.annotations.get('date_last_annotation_update', '')).strip()
         seqlength = len(seq)
 
-        # 5. 组装结果
+
         res = [
             id_, name, is_enzyme, is_multi_functional, function_counts, ec,
             ec_specific_level, date_integrated, date_sequence_update,
             date_annotation_update, seq, seqlength
         ]
 
-        # 6. 根据提取类型筛选返回
+
         if extract_type == 'full':
             return res
         if extract_type == 'with_ec':
@@ -175,7 +157,7 @@ def process_record(record, extract_type: str = 'with_ec') -> List:
             return [] if is_enzyme else res
         return []
     except Exception as e:
-        # 捕获异常，返回空列表
+
         return []
 # endregion
 

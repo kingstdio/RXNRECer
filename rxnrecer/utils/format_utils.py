@@ -12,12 +12,12 @@ def format_rxn_output(RXNRECer_with_prob: Dict[str, float],
         RXNRECer_with_prob: Dictionary containing reaction ID and confidence
         RXN_details: Reaction details list
         RXNRECER_S3: S3 prediction results list (optional, only required for S3 mode)
-        mode: Mode selection，'s2' 或 's3'
+        mode: Mode selection, either 's2' or 's3'
     
     Returns:
-        反应字典列表
+        List of formatted reaction dictionaries
     """
-    # 检查是否只有一个元素且key为'-'（无催化活性）
+
     if len(RXNRECer_with_prob) == 1 and '-' in RXNRECer_with_prob:
         rxns = {
             'reaction_id': '-',
@@ -32,7 +32,7 @@ def format_rxn_output(RXNRECer_with_prob: Dict[str, float],
             }
         }
         
-        # 如果是S3模式，添加额外的S3信息
+
         if mode == 's3' and RXNRECER_S3:
             rxns['reaction_rxnrecer_s3'] = {
                 'selected': RXNRECER_S3[0].get('selected', ''),
@@ -44,16 +44,16 @@ def format_rxn_output(RXNRECer_with_prob: Dict[str, float],
         return [rxns]
     
     else:
-        # 处理多个反应的情况
+
         rxns_list = []
         reaction_keys = list(RXNRECer_with_prob.keys())
         
         for i, item in enumerate(RXN_details):
-            # 获取对应的反应ID和置信度
+
             reaction_id = reaction_keys[i] if i < len(reaction_keys) else f"reaction_{i}"
             confidence = round(float(RXNRECer_with_prob.get(reaction_id, 0.0)), 4)
             
-            # 构建标准化的反应字典
+
             reaction_dict = {
                 'reaction_id': reaction_id,
                 'prediction_confidence': confidence,
@@ -67,7 +67,7 @@ def format_rxn_output(RXNRECer_with_prob: Dict[str, float],
                 }
             }
             
-            # 如果是S3模式，添加额外的S3信息
+
             if mode == 's3' and RXNRECER_S3:
                 s3_info = RXNRECER_S3[i] if i < len(RXNRECER_S3) else RXNRECER_S3[0]
                 reaction_dict['reaction_rxnrecer_s3'] = {
